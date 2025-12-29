@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Heart, ArrowLeft, Settings as SettingsIcon, User, Shield, Bell, Loader2 } from 'lucide-react';
+import { Heart, ArrowLeft, User, Bell, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { ScreeningConfigCard } from '@/components/settings/ScreeningConfigCard';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Profile = Tables<'profiles'>;
@@ -185,22 +186,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Screening Questions
-              </CardTitle>
-              <CardDescription>
-                Configure what you ask potential dates
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Coming soon - customize your screening questionnaire
-              </p>
-            </CardContent>
-          </Card>
+          <ScreeningConfigCard />
 
           <Card>
             <CardHeader>
