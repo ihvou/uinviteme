@@ -664,6 +664,7 @@ export type Database = {
           id: string
           require_phone: boolean | null
           require_selfie: boolean | null
+          require_social_link: boolean | null
           schedule_id: string
           updated_at: string | null
         }
@@ -677,6 +678,7 @@ export type Database = {
           id?: string
           require_phone?: boolean | null
           require_selfie?: boolean | null
+          require_social_link?: boolean | null
           schedule_id: string
           updated_at?: string | null
         }
@@ -690,6 +692,7 @@ export type Database = {
           id?: string
           require_phone?: boolean | null
           require_selfie?: boolean | null
+          require_social_link?: boolean | null
           schedule_id?: string
           updated_at?: string | null
         }

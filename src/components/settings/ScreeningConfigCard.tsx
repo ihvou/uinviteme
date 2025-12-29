@@ -133,29 +133,20 @@ export function ScreeningConfigCard() {
           </div>
         </div>
 
-        {/* Social Links */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium text-foreground">Allow Social Links</h3>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
-              <Label htmlFor="allow-instagram" className="text-sm">Instagram</Label>
-              <Switch
-                id="allow-instagram"
-                checked={config.allow_instagram ?? true}
-                onCheckedChange={(v) => handleToggle('allow_instagram', v)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
-              <Label htmlFor="allow-telegram" className="text-sm">Telegram</Label>
-              <Switch
-                id="allow-telegram"
-                checked={config.allow_telegram ?? true}
-                onCheckedChange={(v) => handleToggle('allow_telegram', v)}
-              />
+        {/* Require Social Link */}
+        <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+          <div className="flex items-center gap-3">
+            <div className="h-4 w-4 text-muted-foreground">@</div>
+            <div>
+              <Label htmlFor="require-social" className="text-sm font-medium">Require social link</Label>
+              <p className="text-xs text-muted-foreground">Invitees must provide Instagram or Telegram</p>
             </div>
           </div>
+          <Switch
+            id="require-social"
+            checked={config.require_social_link ?? false}
+            onCheckedChange={(v) => handleToggle('require_social_link', v)}
+          />
         </div>
 
         {/* Invitee Note */}
