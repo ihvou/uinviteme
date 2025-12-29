@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ScreeningConfigCard } from '@/components/settings/ScreeningConfigCard';
+import { PhotoUpload } from '@/components/settings/PhotoUpload';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Profile = Tables<'profiles'>;
@@ -28,6 +29,7 @@ export default function Settings() {
   const [bioOneLiner, setBioOneLiner] = useState('');
   const [cityLabel, setCityLabel] = useState('');
   const [publicProfileEnabled, setPublicProfileEnabled] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -57,6 +59,7 @@ export default function Settings() {
       setBioOneLiner(data.bio_one_liner || '');
       setCityLabel(data.city_label || '');
       setPublicProfileEnabled(data.public_profile_enabled || false);
+      setPhotoUrl(data.photo_url || null);
     }
     setLoading(false);
   };
@@ -135,6 +138,17 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Photo Upload */}
+              <div className="space-y-2">
+                <Label>Profile Photo</Label>
+                <PhotoUpload
+                  userId={user?.id || ''}
+                  currentPhotoUrl={photoUrl}
+                  displayName={displayName}
+                  onPhotoUpdated={setPhotoUrl}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="displayName">Display Name</Label>
                 <Input
