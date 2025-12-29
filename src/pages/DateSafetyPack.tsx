@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Heart, ArrowLeft, Loader2, Shield, Copy, Clock, CheckCircle, 
@@ -171,16 +172,13 @@ I'll check in by ${checkinTime ? format(parse(checkinTime, 'HH:mm', new Date()),
       {/* Safety Pack Header */}
       <section className="py-6 px-4 bg-card border-b border-border">
         <div className="container mx-auto max-w-2xl">
-          <Link to={`/dates/${dateId}`} className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4">
+          <Link to="/dates" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4">
             <ArrowLeft className="h-4 w-4" />
-            Back to Date Details
+            Back to Dates
           </Link>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Shield className="h-6 w-6 text-accent" />
-              <h1 className="font-display text-2xl font-bold text-foreground">
-                Date Safety Pack
-              </h1>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="font-display text-2xl font-bold text-foreground">Date Details</h1>
             </div>
             <Badge 
               variant={isActive ? "default" : isPaused ? "secondary" : isCompleted ? "outline" : "secondary"} 
@@ -189,7 +187,22 @@ I'll check in by ${checkinTime ? format(parse(checkinTime, 'HH:mm', new Date()),
               {isActive ? "Active" : isPaused ? "Paused" : isCompleted ? "Completed" : "Draft"}
             </Badge>
           </div>
-          <p className="text-muted-foreground mt-2">
+          
+          {/* Tabs for Details / Safety Pack */}
+          <Tabs value="safety" onValueChange={(val) => val === 'details' && navigate(`/dates/${dateId}`)}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="details" className="gap-2">
+                <Calendar className="h-4 w-4" />
+                Details
+              </TabsTrigger>
+              <TabsTrigger value="safety" className="gap-2">
+                <Shield className="h-4 w-4" />
+                Safety Pack
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          <p className="text-muted-foreground mt-4 text-sm">
             {isDraft && "Draft is created automatically. Activation is manual."}
             {isActive && "Safety Pack is active. You can pause anytime."}
             {isPaused && "Safety Pack is paused. Reactivate when ready."}
