@@ -1,4 +1,4 @@
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useDate, DateUpdateData } from '@/hooks/useDate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,10 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Heart, ArrowLeft, Loader2, Shield, Calendar, MapPin, Clock, User, Save, Instagram, Phone, Mail, Send } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { 
+  Heart, ArrowLeft, Loader2, Shield, Calendar, MapPin, Clock, 
+  User, Save, Instagram, Phone, Mail, Send, MessageSquare
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 const timeBucketOptions = [
@@ -23,10 +27,20 @@ export default function DateDetail() {
   const { dateId } = useParams<{ dateId: string }>();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { dateRecord, loading, error, updateDate, getInvitee } = useDate(dateId);
+  const location = useLocation();
+  
+  const { 
+    dateRecord, loading, error, updateDate, getInvitee,
+    getFormatLabel, getIntentLabel, getVibeLabels, getBoundaryLabels,
+    getAnswersWithLabels, catalogs
+  } = useDate(dateId);
   
   const [formData, setFormData] = useState<DateUpdateData>({});
   const [saving, setSaving] = useState(false);
+  
+  // Determine active tab from URL
+  const isSafetyTab = location.pathname.endsWith('/safety');
+  const activeTab = isSafetyTab ? 'safety' : 'details';
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -58,6 +72,14 @@ export default function DateDetail() {
       toast.error('Failed to update date');
     } else {
       toast.success('Date updated');
+    }
+  };
+
+  const handleTabChange = (value: string) => {
+    if (value === 'safety') {
+      navigate(`/dates/${dateId}/safety`);
+    } else {
+      navigate(`/dates/${dateId}`);
     }
   };
 
@@ -93,6 +115,9 @@ export default function DateDetail() {
   }
 
   const invitee = getInvitee();
+  const answers = getAnswersWithLabels();
+  const vibeLabels = getVibeLabels(dateRecord.vibe_tags);
+  const boundaryLabels = getBoundaryLabels(dateRecord.boundary_tags);
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -124,40 +149,102 @@ export default function DateDetail() {
           </div>
         </div>
 
+        {/* Tabs for Details / Safety Pack */}
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="details" className="gap-2">
+              <Calendar className="h-4 w-4" />
+              Details
+            </TabsTrigger>
+            <TabsTrigger value="safety" className="gap-2">
+              <Shield className="h-4 w-4" />
+              Safety Pack
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         <div className="space-y-6">
-          {/* Invitee Summary */}
+          {/* Compact Invitee Summary */}
           {invitee && (
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <User className="h-5 w-5 text-primary" />
-                  Meeting With
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="font-medium text-foreground text-lg">{invitee.name}</p>
-                {invitee.instagram_handle && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Instagram className="h-4 w-4" />
-                    <span>@{invitee.instagram_handle.replace('@', '')}</span>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  {/* Selfie / Avatar */}
+                  <Avatar className="h-16 w-16 flex-shrink-0">
+                    {invitee.selfie_url ? (
+                      <AvatarImage src={invitee.selfie_url} alt={invitee.name} />
+                    ) : null}
+                    <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                      {invitee.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-foreground text-lg">{invitee.name}</h3>
+                    </div>
+                    
+                    {/* Social links - clickable */}
+                    <div className="flex flex-wrap gap-3 text-sm">
+                      {invitee.instagram_handle && (
+                        <a 
+                          href={`https://instagram.com/${invitee.instagram_handle.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          <Instagram className="h-4 w-4" />
+                          @{invitee.instagram_handle.replace('@', '')}
+                        </a>
+                      )}
+                      {invitee.telegram_username && (
+                        <a 
+                          href={`https://t.me/${invitee.telegram_username.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          <Send className="h-4 w-4" />
+                          @{invitee.telegram_username.replace('@', '')}
+                        </a>
+                      )}
+                      {invitee.phone_e164 && (
+                        <a 
+                          href={`tel:${invitee.phone_e164}`}
+                          className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          <Phone className="h-4 w-4" />
+                          {invitee.phone_e164}
+                        </a>
+                      )}
+                      {invitee.email && (
+                        <a 
+                          href={`mailto:${invitee.email}`}
+                          className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          <Mail className="h-4 w-4" />
+                          {invitee.email}
+                        </a>
+                      )}
+                    </div>
                   </div>
-                )}
-                {invitee.telegram_username && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Send className="h-4 w-4" />
-                    <span>@{invitee.telegram_username.replace('@', '')}</span>
-                  </div>
-                )}
-                {invitee.phone_e164 && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone className="h-4 w-4" />
-                    <span>{invitee.phone_e164}</span>
-                  </div>
-                )}
-                {invitee.email && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                    <span>{invitee.email}</span>
+                </div>
+
+                {/* Screening Answers */}
+                {answers.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                      <MessageSquare className="h-4 w-4" />
+                      <span>Screening Responses</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      {answers.map((a, idx) => (
+                        <div key={idx}>
+                          <span className="text-muted-foreground">{a.question}:</span>{' '}
+                          <span className="text-foreground font-medium">{a.answer}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -262,40 +349,70 @@ export default function DateDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="format">Format (optional)</Label>
-                <Input
-                  id="format"
-                  value={formData.format || ''}
-                  onChange={(e) => setFormData({ ...formData, format: e.target.value || null })}
-                  placeholder="e.g., Drinks, Coffee, Dinner"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Format</Label>
+                  <Select
+                    value={formData.format || ''}
+                    onValueChange={(val) => setFormData({ ...formData, format: val || null })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select format" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {catalogs && Object.entries(catalogs.formats).map(([id, label]) => (
+                        <SelectItem key={id} value={id}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Intent</Label>
+                  <Select
+                    value={formData.intent_tag || ''}
+                    onValueChange={(val) => setFormData({ ...formData, intent_tag: val || null })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select intent" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {catalogs && Object.entries(catalogs.intents).map(([id, label]) => (
+                        <SelectItem key={id} value={id}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="intent_tag">Intent (optional)</Label>
-                <Input
-                  id="intent_tag"
-                  value={formData.intent_tag || ''}
-                  onChange={(e) => setFormData({ ...formData, intent_tag: e.target.value || null })}
-                  placeholder="e.g., Casual, Romantic"
-                />
-              </div>
+              
+              {/* Display current vibes and boundaries as badges */}
+              {(vibeLabels.length > 0 || boundaryLabels.length > 0) && (
+                <div className="pt-2 space-y-2">
+                  {vibeLabels.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-sm text-muted-foreground">Vibes:</span>
+                      {vibeLabels.map((label, idx) => (
+                        <Badge key={idx} variant="secondary">{label}</Badge>
+                      ))}
+                    </div>
+                  )}
+                  {boundaryLabels.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-sm text-muted-foreground">Boundaries:</span>
+                      {boundaryLabels.map((label, idx) => (
+                        <Badge key={idx} variant="outline">{label}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Save Button */}
-          <div className="flex gap-3">
-            <Button onClick={handleSave} disabled={saving} className="flex-1 gap-2">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Save Changes
-            </Button>
-            <Link to={`/dates/${dateId}/safety`} className="flex-1">
-              <Button variant="outline" className="w-full gap-2">
-                <Shield className="h-4 w-4" />
-                Open Safety Pack
-              </Button>
-            </Link>
-          </div>
+          <Button onClick={handleSave} disabled={saving} className="w-full gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save Changes
+          </Button>
         </div>
       </main>
     </div>
