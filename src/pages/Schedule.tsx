@@ -9,6 +9,7 @@ import { Heart, ArrowLeft, Calendar, Plus, Loader2, Pencil, Trash2, Coffee, Wine
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SlotFormDialog } from '@/components/schedule/SlotFormDialog';
+import { InviteLinkCard } from '@/components/schedule/InviteLinkCard';
 import { toast } from '@/hooks/use-toast';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -248,6 +249,10 @@ export default function Schedule() {
             )}
           </CardContent>
         </Card>
+
+        <div className="mt-6">
+          <InviteLinkCard scheduleId={schedule?.id || null} />
+        </div>
       </main>
 
       <SlotFormDialog
