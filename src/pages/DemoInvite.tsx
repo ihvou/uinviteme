@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Heart, ArrowLeft, Calendar, MapPin, Coffee, Wine, Sun, Lock, Info } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useState } from 'react';
+import demoJamiePhoto from '@/assets/demo-jamie.jpg';
 
 export default function DemoInvite() {
   const [expandedSlot, setExpandedSlot] = useState<string | null>(null);
@@ -67,9 +68,11 @@ export default function DemoInvite() {
       {/* Profile Header */}
       <section className="py-12 px-4 bg-card border-b border-border">
         <div className="container mx-auto max-w-2xl text-center">
-          <div className="w-24 h-24 rounded-full bg-gradient-hero mx-auto mb-4 flex items-center justify-center">
-            <span className="text-3xl font-display font-bold text-primary-foreground">JD</span>
-          </div>
+          <img 
+            src={demoJamiePhoto} 
+            alt="Jamie" 
+            className="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-2 border-primary/20"
+          />
           <h1 className="font-display text-2xl font-bold text-foreground mb-2">
             Jamie's Invite Page
           </h1>
