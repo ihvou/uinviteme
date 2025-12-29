@@ -157,18 +157,18 @@ export function usePublicInvite(token: string | undefined) {
     if (!inviteLink) return { error: 'No invite link' };
 
     try {
-      // Create invitee record
-      const { data: invitee, error: inviteeError } = await supabase
+      // Create invitee record (avoid SELECT/RETURNING to keep anon inserts simple under RLS)
+      const inviteeId = crypto.randomUUID();
+      const { error: inviteeError } = await supabase
         .from('invitees')
         .insert({
+          id: inviteeId,
           name: data.inviteeData.name,
           phone_e164: data.inviteeData.phone_e164,
           email: data.inviteeData.email,
           instagram_handle: data.inviteeData.instagram_handle,
           telegram_username: data.inviteeData.telegram_username,
-        })
-        .select()
-        .single();
+        });
 
       if (inviteeError) throw inviteeError;
 
@@ -177,7 +177,7 @@ export function usePublicInvite(token: string | undefined) {
         schedule_id: inviteLink.schedule_id,
         slot_id: data.slotId,
         invite_link_id: inviteLink.id,
-        invitee_id: invitee.id,
+        invitee_id: inviteeId,
         target_date: data.targetDate,
         answers: data.answers as Json,
         invitee_note: data.inviteeNote || null,
