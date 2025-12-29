@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from '@/hooks/use-toast';
 import {
   Calendar,
@@ -20,6 +21,8 @@ import {
   CircleCheck,
   Circle,
   Shield,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -37,6 +40,7 @@ export default function Dashboard() {
   const [copied, setCopied] = useState(false);
   const [hasSlots, setHasSlots] = useState(false);
   const [hasScreening, setHasScreening] = useState(false);
+  const [checklistOpen, setChecklistOpen] = useState(true);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -250,79 +254,94 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Setup Checklist */}
+        {/* Setup Checklist - Collapsible */}
         {!allComplete && (
-          <Card className="mb-6 border-accent/30 bg-accent/5">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-accent" />
-                  Get started
-                </CardTitle>
-                <span className="text-xs text-muted-foreground">
-                  {completedSteps} of {setupSteps.length} complete
-                </span>
-              </div>
-              {/* Progress bar */}
-              <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-2">
-                <div 
-                  className="h-full bg-accent transition-all duration-500"
-                  style={{ width: `${(completedSteps / setupSteps.length) * 100}%` }}
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-2">
-                {setupSteps.map((step) => {
-                  const stepClassName = `flex items-center gap-3 w-full p-3 rounded-lg transition-colors text-left ${
-                    step.completed 
-                      ? 'bg-success/10 cursor-default' 
-                      : 'bg-card hover:bg-muted/50 cursor-pointer border border-border'
-                  }`;
-
-                  const content = (
-                    <>
-                      {step.completed ? (
-                        <CircleCheck className="h-5 w-5 text-success shrink-0" />
-                      ) : (
-                        <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium ${step.completed ? 'text-success' : 'text-foreground'}`}>
-                          {step.label}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {step.description}
-                        </p>
+          <Collapsible open={checklistOpen} onOpenChange={setChecklistOpen}>
+            <Card className="mb-6 border-accent/30 bg-accent/5">
+              <CardHeader className="pb-3">
+                <CollapsibleTrigger asChild>
+                  <button className="w-full text-left">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base font-semibold flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-accent" />
+                        Get started
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {completedSteps} of {setupSteps.length}
+                        </span>
+                        {checklistOpen ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </div>
-                      {!step.completed && (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                      )}
-                    </>
-                  );
+                    </div>
+                    {/* Progress bar */}
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-2">
+                      <div 
+                        className="h-full bg-accent transition-all duration-500"
+                        style={{ width: `${(completedSteps / setupSteps.length) * 100}%` }}
+                      />
+                    </div>
+                  </button>
+                </CollapsibleTrigger>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent className="pt-0">
+                  <div className="space-y-2">
+                    {setupSteps.map((step) => {
+                      const stepClassName = `flex items-center gap-3 w-full p-3 rounded-lg transition-colors text-left ${
+                        step.completed 
+                          ? 'bg-success/10 cursor-default' 
+                          : 'bg-card hover:bg-muted/50 cursor-pointer border border-border'
+                      }`;
 
-                  if (step.link) {
-                    return (
-                      <Link key={step.id} to={step.link} className={stepClassName}>
-                        {content}
-                      </Link>
-                    );
-                  }
+                      const content = (
+                        <>
+                          {step.completed ? (
+                            <CircleCheck className="h-5 w-5 text-success shrink-0" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium ${step.completed ? 'text-success' : 'text-foreground'}`}>
+                              {step.label}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {step.description}
+                            </p>
+                          </div>
+                          {!step.completed && (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                          )}
+                        </>
+                      );
 
-                  return (
-                    <button
-                      key={step.id}
-                      type="button"
-                      onClick={step.action}
-                      className={stepClassName}
-                    >
-                      {content}
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                      if (step.link) {
+                        return (
+                          <Link key={step.id} to={step.link} className={stepClassName}>
+                            {content}
+                          </Link>
+                        );
+                      }
+
+                      return (
+                        <button
+                          key={step.id}
+                          type="button"
+                          onClick={step.action}
+                          className={stepClassName}
+                        >
+                          {content}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         )}
 
         {/* Unified Action Cards */}

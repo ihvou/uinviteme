@@ -133,19 +133,35 @@ export function ScreeningConfigCard() {
           </div>
         </div>
 
-        {/* Require Social Link */}
+        {/* Require Instagram */}
         <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
           <div className="flex items-center gap-3">
-            <div className="h-4 w-4 text-muted-foreground">@</div>
+            <div className="h-4 w-4 text-muted-foreground">📸</div>
             <div>
-              <Label htmlFor="require-social" className="text-sm font-medium">Require social link</Label>
-              <p className="text-xs text-muted-foreground">Invitees must provide Instagram or Telegram</p>
+              <Label htmlFor="require-instagram" className="text-sm font-medium">Require Instagram</Label>
+              <p className="text-xs text-muted-foreground">Invitees must provide an Instagram handle</p>
             </div>
           </div>
           <Switch
-            id="require-social"
-            checked={config.require_social_link ?? false}
-            onCheckedChange={(v) => handleToggle('require_social_link', v)}
+            id="require-instagram"
+            checked={(config as any).require_instagram ?? false}
+            onCheckedChange={(v) => handleToggle('require_instagram', v)}
+          />
+        </div>
+
+        {/* Require Telegram */}
+        <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+          <div className="flex items-center gap-3">
+            <div className="h-4 w-4 text-muted-foreground">✈️</div>
+            <div>
+              <Label htmlFor="require-telegram" className="text-sm font-medium">Require Telegram</Label>
+              <p className="text-xs text-muted-foreground">Invitees must provide a Telegram username</p>
+            </div>
+          </div>
+          <Switch
+            id="require-telegram"
+            checked={(config as any).require_telegram ?? false}
+            onCheckedChange={(v) => handleToggle('require_telegram', v)}
           />
         </div>
 
@@ -192,17 +208,33 @@ export function ScreeningConfigCard() {
                 <div key={question.id} className="border border-border rounded-lg p-3 space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Label className="text-sm font-medium">{question.label}</Label>
-                        <Badge variant="outline" className="text-xs">
-                          {question.type.replace('_', ' ')}
-                        </Badge>
                         {question.auto_decline_supported && (
                           <Badge variant="secondary" className="text-xs">
                             auto-decline
                           </Badge>
                         )}
                       </div>
+                      {/* Show answer options preview */}
+                      {answers && answers.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {answers.map((answer) => (
+                            <Badge key={answer} variant="outline" className="text-xs font-normal">
+                              {answer}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      {question.type === 'boolean' && (
+                        <div className="flex gap-1 mt-2">
+                          <Badge variant="outline" className="text-xs font-normal">Yes</Badge>
+                          <Badge variant="outline" className="text-xs font-normal">No</Badge>
+                        </div>
+                      )}
+                      {question.type === 'text' && (
+                        <p className="text-xs text-muted-foreground mt-1">Free text answer</p>
+                      )}
                     </div>
                     <Switch
                       checked={isEnabled}
