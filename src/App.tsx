@@ -11,6 +11,8 @@ import Schedule from "./pages/Schedule";
 import Invites from "./pages/Invites";
 import Dates from "./pages/Dates";
 import Settings from "./pages/Settings";
+import DemoInvite from "./pages/DemoInvite";
+import DemoSafetyPack from "./pages/DemoSafetyPack";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +32,8 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/demo/invite" element={<DemoInvite />} />
+            <Route path="/demo/safety-pack" element={<DemoSafetyPack />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
