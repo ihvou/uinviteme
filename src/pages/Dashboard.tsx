@@ -3,18 +3,21 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from '@/hooks/use-toast';
 import {
   Calendar,
   Heart,
   LogOut,
-  Plus,
   Users,
   Settings,
   Shield,
   Loader2,
   CalendarDays,
-  Link as LinkIcon,
+  Copy,
+  Check,
+  ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -29,6 +32,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [pendingInvites, setPendingInvites] = useState(0);
   const [upcomingDates, setUpcomingDates] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -103,6 +107,14 @@ export default function Dashboard() {
     navigate('/');
   };
 
+  const handleCopyLink = () => {
+    const link = `${window.location.origin}/invite/${profile?.handle || user?.id}`;
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    toast({ title: 'Link copied!', description: 'Share it on your dating profiles' });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-subtle">
@@ -110,6 +122,8 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const inviteLink = `${window.location.origin}/invite/${profile?.handle || user?.id}`;
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -132,162 +146,185 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-            Welcome back{profile?.display_name ? `, ${profile.display_name}` : ''}!
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your dating schedule and review incoming invites.
-          </p>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid gap-4 md:grid-cols-3 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Invites</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{pendingInvites}</div>
-              <p className="text-xs text-muted-foreground">
-                People waiting for your response
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Upcoming Dates</CardTitle>
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{upcomingDates}</div>
-              <p className="text-xs text-muted-foreground">
-                Confirmed dates on your calendar
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Schedule Status</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {schedule?.is_active ? (
-                  <span className="text-success">Active</span>
-                ) : (
-                  <span className="text-muted-foreground">Inactive</span>
-                )}
+      <main className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Welcome + Share Link (Hero) */}
+        <Card className="mb-8 bg-gradient-to-br from-primary/5 via-card to-accent/5 border-primary/20">
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="font-display text-2xl font-bold text-foreground mb-1">
+                  Welcome back{profile?.display_name ? `, ${profile.display_name}` : ''}!
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Share your invite link on dating apps
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {schedule?.is_active ? 'Accepting invites' : 'Not accepting invites'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-accent hidden sm:block" />
+              </div>
+            </div>
 
-        {/* Quick Actions */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Link to="/schedule">
-            <Card className="cursor-pointer hover:shadow-md transition-shadow h-full">
-              <CardHeader>
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
-                  <Calendar className="h-5 w-5 text-primary" />
+            {/* Invite Link Box */}
+            <div className="mt-5 p-4 bg-card rounded-xl border border-border shadow-sm">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 bg-muted/50 rounded-lg px-4 py-3 text-sm font-mono text-foreground truncate border border-border/50">
+                  {inviteLink}
                 </div>
-                <CardTitle className="text-lg">My Schedule</CardTitle>
-                <CardDescription>
-                  Set your weekly availability and date preferences
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-
-          <Link to="/invites">
-            <Card className="cursor-pointer hover:shadow-md transition-shadow h-full">
-              <CardHeader>
-                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center mb-2">
-                  <Users className="h-5 w-5 text-accent" />
-                </div>
-                <CardTitle className="text-lg">Review Invites</CardTitle>
-                <CardDescription>
-                  See who wants to meet you and respond
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-
-          <Link to="/dates">
-            <Card className="cursor-pointer hover:shadow-md transition-shadow h-full">
-              <CardHeader>
-                <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center mb-2">
-                  <Shield className="h-5 w-5 text-success" />
-                </div>
-                <CardTitle className="text-lg">My Dates</CardTitle>
-                <CardDescription>
-                  View upcoming dates and activate Safety Packs
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-
-          <Link to="/settings">
-            <Card className="cursor-pointer hover:shadow-md transition-shadow h-full">
-              <CardHeader>
-                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center mb-2">
-                  <Settings className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <CardTitle className="text-lg">Settings</CardTitle>
-                <CardDescription>
-                  Profile, screening questions, and preferences
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-        </div>
-
-        {/* Share Link Section */}
-        {schedule && (
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LinkIcon className="h-5 w-5" />
-                Share Your Invite Link
-              </CardTitle>
-              <CardDescription>
-                Copy this link to your dating profiles or share directly with matches
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                <div className="flex-1 bg-muted rounded-lg px-4 py-2 text-sm font-mono text-muted-foreground truncate">
-                  {window.location.origin}/invite/{profile?.handle || user?.id}
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      `${window.location.origin}/invite/${profile?.handle || user?.id}`
-                    );
-                  }}
+                <Button 
+                  onClick={handleCopyLink}
+                  className="gap-2 shrink-0"
+                  size="lg"
                 >
-                  Copy
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      Copy Link
+                    </>
+                  )}
                 </Button>
               </div>
               {!profile?.handle && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  <Link to="/settings" className="text-primary hover:underline">
+                <p className="text-xs text-muted-foreground mt-3">
+                  Want a cleaner URL?{' '}
+                  <Link to="/settings" className="text-primary hover:underline font-medium">
                     Set a custom handle
-                  </Link>{' '}
-                  for a friendlier invite link.
+                  </Link>
                 </p>
               )}
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Unified Action Cards */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Invites Card */}
+          <Link to="/invites" className="group">
+            <Card className="h-full transition-all hover:shadow-md hover:border-primary/30 cursor-pointer">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                      <Users className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-semibold">Invites</CardTitle>
+                      {pendingInvites > 0 ? (
+                        <p className="text-sm text-primary font-medium">
+                          {pendingInvites} pending
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          No invites yet
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                {pendingInvites === 0 && (
+                  <p className="text-xs text-muted-foreground mt-3 pl-14">
+                    Share your link to start receiving invites
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Dates Card */}
+          <Link to="/dates" className="group">
+            <Card className="h-full transition-all hover:shadow-md hover:border-success/30 cursor-pointer">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-success/10 flex items-center justify-center group-hover:bg-success/15 transition-colors">
+                      <CalendarDays className="h-5 w-5 text-success" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-semibold">Dates</CardTitle>
+                      {upcomingDates > 0 ? (
+                        <p className="text-sm text-success font-medium">
+                          {upcomingDates} upcoming
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          No dates scheduled
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-success transition-colors" />
+                </div>
+                {upcomingDates === 0 && (
+                  <p className="text-xs text-muted-foreground mt-3 pl-14">
+                    Accept invites to schedule your first date
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Schedule Card */}
+          <Link to="/schedule" className="group">
+            <Card className="h-full transition-all hover:shadow-md hover:border-accent/30 cursor-pointer">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/15 transition-colors">
+                      <Calendar className="h-5 w-5 text-accent" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-semibold">Schedule</CardTitle>
+                      {schedule?.is_active ? (
+                        <p className="text-sm text-success font-medium">Active</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Inactive</p>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-accent transition-colors" />
+                </div>
+                <p className="text-xs text-muted-foreground mt-3 pl-14">
+                  {schedule?.is_active 
+                    ? 'Your availability is visible to invitees'
+                    : 'Add slots to start accepting invites'
+                  }
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Profile/Settings Card */}
+          <Link to="/settings" className="group">
+            <Card className="h-full transition-all hover:shadow-md hover:border-border cursor-pointer">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-muted flex items-center justify-center group-hover:bg-muted/80 transition-colors">
+                      <Settings className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-semibold">Profile</CardTitle>
+                      {profile?.public_profile_enabled ? (
+                        <p className="text-sm text-success font-medium">Public</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Private</p>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                </div>
+                <p className="text-xs text-muted-foreground mt-3 pl-14">
+                  Screening questions and preferences
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
       </main>
     </div>
   );
