@@ -36,7 +36,7 @@ const FORMAT_ICONS: Record<string, React.ElementType> = {
 export default function Schedule() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { schedule, slots, formats, vibeTags, loading, error, addSlot, updateSlot, deleteSlot } = useSchedule();
+  const { schedule, slots, formats, vibeTags, intentTags, boundaryTags, loading, error, addSlot, updateSlot, deleteSlot } = useSchedule();
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState<Slot | null>(null);
@@ -103,10 +103,22 @@ export default function Schedule() {
     );
   };
 
+  const getIntentTagLabel = (tagId: string | null) => {
+    if (!tagId) return null;
+    return intentTags.find((t) => t.id === tagId)?.label;
+  };
+
   const getVibeTagLabels = (tagIds: string[] | null) => {
     if (!tagIds || tagIds.length === 0) return null;
     return tagIds
       .map((id) => vibeTags.find((t) => t.id === id)?.label)
+      .filter(Boolean);
+  };
+
+  const getBoundaryTagLabels = (tagIds: string[] | null) => {
+    if (!tagIds || tagIds.length === 0) return null;
+    return tagIds
+      .map((id) => boundaryTags.find((t) => t.id === id)?.label)
       .filter(Boolean);
   };
 
@@ -156,7 +168,7 @@ export default function Schedule() {
               Weekly Slots
             </CardTitle>
             <CardDescription>
-              Define when you're available for dates
+              Define when you're available for dates. Showing the next 7 days, updated automatically.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -170,49 +182,69 @@ export default function Schedule() {
                 </Button>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Day</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Area</TableHead>
-                    <TableHead>Format</TableHead>
-                    <TableHead>Vibe</TableHead>
-                    <TableHead className="w-24"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {slots.map((slot) => (
-                    <TableRow key={slot.id}>
-                      <TableCell className="font-medium">
-                        {WEEKDAY_LABELS[slot.weekday]}
-                      </TableCell>
-                      <TableCell>{TIME_BUCKET_LABELS[slot.time_bucket]}</TableCell>
-                      <TableCell>{slot.area_label}</TableCell>
-                      <TableCell>{getFormatLabel(slot.format)}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {getVibeTagLabels(slot.vibe_tags)?.map((label) => (
-                            <Badge key={label} variant="secondary" className="text-xs">
-                              {label}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(slot)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(slot)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Day</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Area</TableHead>
+                      <TableHead>Format</TableHead>
+                      <TableHead>Intent</TableHead>
+                      <TableHead>Vibe</TableHead>
+                      <TableHead>Boundaries</TableHead>
+                      <TableHead className="w-24"></TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {slots.map((slot) => (
+                      <TableRow key={slot.id}>
+                        <TableCell className="font-medium">
+                          {WEEKDAY_LABELS[slot.weekday]}
+                        </TableCell>
+                        <TableCell>{TIME_BUCKET_LABELS[slot.time_bucket]}</TableCell>
+                        <TableCell>{slot.area_label}</TableCell>
+                        <TableCell>{getFormatLabel(slot.format)}</TableCell>
+                        <TableCell>
+                          {getIntentTagLabel(slot.intent_tag) && (
+                            <Badge variant="outline" className="border-primary/30 text-primary text-xs">
+                              {getIntentTagLabel(slot.intent_tag)}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {getVibeTagLabels(slot.vibe_tags)?.map((label) => (
+                              <Badge key={label} variant="secondary" className="text-xs">
+                                {label}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {getBoundaryTagLabels(slot.boundary_tags)?.map((label) => (
+                              <Badge key={label} variant="outline" className="text-xs border-destructive/30 text-destructive">
+                                {label}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(slot)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(slot)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -224,6 +256,8 @@ export default function Schedule() {
         slot={editingSlot}
         formats={formats}
         vibeTags={vibeTags}
+        intentTags={intentTags}
+        boundaryTags={boundaryTags}
         onSubmit={handleSubmit}
       />
     </div>

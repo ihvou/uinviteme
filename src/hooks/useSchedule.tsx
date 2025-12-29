@@ -10,6 +10,8 @@ export type SlotUpdate = TablesUpdate<'slots'>;
 
 export type CatalogFormat = Tables<'catalog_formats'>;
 export type CatalogVibeTag = Tables<'catalog_vibe_tags'>;
+export type CatalogIntentTag = Tables<'catalog_intent_tags'>;
+export type CatalogBoundaryTag = Tables<'catalog_boundary_tags'>;
 
 export function useSchedule() {
   const { user } = useAuth();
@@ -17,6 +19,8 @@ export function useSchedule() {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [formats, setFormats] = useState<CatalogFormat[]>([]);
   const [vibeTags, setVibeTags] = useState<CatalogVibeTag[]>([]);
+  const [intentTags, setIntentTags] = useState<CatalogIntentTag[]>([]);
+  const [boundaryTags, setBoundaryTags] = useState<CatalogBoundaryTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,13 +90,17 @@ export function useSchedule() {
   // Fetch catalogs
   useEffect(() => {
     async function fetchCatalogs() {
-      const [formatsRes, vibeTagsRes] = await Promise.all([
+      const [formatsRes, vibeTagsRes, intentTagsRes, boundaryTagsRes] = await Promise.all([
         supabase.from('catalog_formats').select('*').eq('is_active', true).order('sort_order'),
         supabase.from('catalog_vibe_tags').select('*').eq('is_active', true).order('sort_order'),
+        supabase.from('catalog_intent_tags').select('*').eq('is_active', true).order('sort_order'),
+        supabase.from('catalog_boundary_tags').select('*').eq('is_active', true).order('sort_order'),
       ]);
 
       if (formatsRes.data) setFormats(formatsRes.data);
       if (vibeTagsRes.data) setVibeTags(vibeTagsRes.data);
+      if (intentTagsRes.data) setIntentTags(intentTagsRes.data);
+      if (boundaryTagsRes.data) setBoundaryTags(boundaryTagsRes.data);
     }
 
     fetchCatalogs();
@@ -154,6 +162,8 @@ export function useSchedule() {
     slots,
     formats,
     vibeTags,
+    intentTags,
+    boundaryTags,
     loading,
     error,
     addSlot,
