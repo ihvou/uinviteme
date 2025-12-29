@@ -1,10 +1,14 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Heart, ArrowLeft, Calendar, MapPin, Coffee, Wine, Sun } from 'lucide-react';
+import { Heart, ArrowLeft, Calendar, MapPin, Coffee, Wine, Sun, Lock, Info } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useState } from 'react';
 
 export default function DemoInvite() {
+  const [expandedSlot, setExpandedSlot] = useState<string | null>(null);
+  
   const demoSlots = [
     {
       id: '1',
@@ -12,7 +16,8 @@ export default function DemoInvite() {
       time: 'Evening (6-9 PM)',
       area: 'Downtown',
       format: 'Drinks',
-      vibes: ['Chill', 'Getting to know you'],
+      intentTags: ['Serious only'],
+      vibeTags: ['Chill', 'Getting to know you'],
       icon: Wine,
     },
     {
@@ -21,7 +26,8 @@ export default function DemoInvite() {
       time: 'Afternoon (2-5 PM)',
       area: 'Midtown',
       format: 'Coffee',
-      vibes: ['Casual', 'Quick meet'],
+      intentTags: ['Coffee first'],
+      vibeTags: ['Casual', 'Quick meet'],
       icon: Coffee,
     },
     {
@@ -30,7 +36,8 @@ export default function DemoInvite() {
       time: 'Morning (10 AM-1 PM)',
       area: 'Brooklyn',
       format: 'Brunch',
-      vibes: ['Adventure', 'Weekend energy'],
+      intentTags: ['Open to anything'],
+      vibeTags: ['Adventure', 'Weekend energy'],
       icon: Sun,
     },
   ];
@@ -72,22 +79,30 @@ export default function DemoInvite() {
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
             "I'm over endless texting. If we vibe, let's grab a drink and see where it goes. Swipe right if you're ready to actually meet!"
           </p>
+          <p className="text-xs text-muted-foreground/70 mt-4">
+            Share this link on Tinder, Hinge, Instagram—anywhere you chat.
+          </p>
         </div>
       </section>
 
       {/* Available Slots */}
       <section className="py-12 px-4">
         <div className="container mx-auto max-w-2xl">
-          <h2 className="font-display text-xl font-semibold text-foreground mb-6 flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            Available This Week
-          </h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-display text-xl font-semibold text-foreground flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Available This Week
+            </h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-6">
+            Showing the next 7 days. Updated automatically.
+          </p>
 
           <div className="space-y-4">
             {demoSlots.map((slot) => {
               const Icon = slot.icon;
               return (
-                <Card key={slot.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                <Card key={slot.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4">
@@ -102,7 +117,12 @@ export default function DemoInvite() {
                             <MapPin className="h-3 w-3" /> {slot.area} · {slot.format}
                           </p>
                           <div className="flex flex-wrap gap-1 mt-2">
-                            {slot.vibes.map((vibe) => (
+                            {slot.intentTags.map((tag) => (
+                              <Badge key={tag} variant="outline" className="text-xs border-primary/30 text-primary">
+                                {tag}
+                              </Badge>
+                            ))}
+                            {slot.vibeTags.map((vibe) => (
                               <Badge key={vibe} variant="secondary" className="text-xs">
                                 {vibe}
                               </Badge>
@@ -110,7 +130,12 @@ export default function DemoInvite() {
                           </div>
                         </div>
                       </div>
-                      <Button size="sm">Request</Button>
+                      <div className="text-right">
+                        <Button size="sm">Invite</Button>
+                        <p className="text-[10px] text-muted-foreground mt-1 max-w-[100px]">
+                          Not a commitment—just a signal
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -118,9 +143,15 @@ export default function DemoInvite() {
             })}
           </div>
 
+          {/* Privacy reassurance */}
+          <div className="mt-6 flex items-center gap-2 text-xs text-muted-foreground justify-center">
+            <Lock className="h-3 w-3" />
+            <span>Your details are private. Only the host sees your answers.</span>
+          </div>
+
           <div className="mt-8 p-4 bg-secondary/30 rounded-lg text-center">
             <p className="text-sm text-muted-foreground mb-3">
-              In the real flow, clicking "Request" opens the invite wizard with screening questions.
+              In the real flow, clicking "Invite" opens the invite wizard with screening questions.
             </p>
             <Link to="/auth?mode=signup">
               <Button className="gap-2">
