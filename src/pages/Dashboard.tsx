@@ -11,13 +11,15 @@ import {
   LogOut,
   Users,
   Settings,
-  Shield,
   Loader2,
   CalendarDays,
   Copy,
   Check,
   ChevronRight,
   Sparkles,
+  CircleCheck,
+  Circle,
+  Shield,
 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -33,6 +35,8 @@ export default function Dashboard() {
   const [pendingInvites, setPendingInvites] = useState(0);
   const [upcomingDates, setUpcomingDates] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [hasSlots, setHasSlots] = useState(false);
+  const [hasScreening, setHasScreening] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -84,6 +88,24 @@ export default function Dashboard() {
           .eq('schedule_id', scheduleData.id)
           .eq('status', 'pending');
         setPendingInvites(inviteCount || 0);
+
+        // Check if user has slots
+        const { count: slotCount } = await supabase
+          .from('slots')
+          .select('*', { count: 'exact', head: true })
+          .eq('schedule_id', scheduleData.id)
+          .eq('is_active', true);
+        setHasSlots((slotCount || 0) > 0);
+
+        // Check if user has screening config with enabled questions
+        const { data: screeningConfig } = await supabase
+          .from('screening_configs')
+          .select('enabled_questions')
+          .eq('schedule_id', scheduleData.id)
+          .single();
+        
+        const enabledQuestions = (screeningConfig?.enabled_questions as string[]) || [];
+        setHasScreening(enabledQuestions.length > 0);
       }
 
       // Fetch upcoming dates count
@@ -125,6 +147,34 @@ export default function Dashboard() {
 
   const inviteLink = `${window.location.origin}/invite/${profile?.handle || user?.id}`;
 
+  // Setup checklist items
+  const setupSteps = [
+    {
+      id: 'schedule',
+      label: 'Add availability slots',
+      completed: hasSlots,
+      link: '/schedule',
+      description: "Set when you're free for dates",
+    },
+    {
+      id: 'screening',
+      label: 'Configure screening',
+      completed: hasScreening,
+      link: '/settings',
+      description: 'Choose what to ask invitees',
+    },
+    {
+      id: 'share',
+      label: 'Share your link',
+      completed: copied,
+      action: handleCopyLink,
+      description: 'Post on dating apps',
+    },
+  ];
+
+  const completedSteps = setupSteps.filter((s) => s.completed).length;
+  const allComplete = completedSteps === setupSteps.length;
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
       {/* Header */}
@@ -148,7 +198,7 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Welcome + Share Link (Hero) */}
-        <Card className="mb-8 bg-gradient-to-br from-primary/5 via-card to-accent/5 border-primary/20">
+        <Card className="mb-6 bg-gradient-to-br from-primary/5 via-card to-accent/5 border-primary/20">
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
@@ -199,6 +249,81 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Setup Checklist */}
+        {!allComplete && (
+          <Card className="mb-6 border-accent/30 bg-accent/5">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-accent" />
+                  Get started
+                </CardTitle>
+                <span className="text-xs text-muted-foreground">
+                  {completedSteps} of {setupSteps.length} complete
+                </span>
+              </div>
+              {/* Progress bar */}
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-2">
+                <div 
+                  className="h-full bg-accent transition-all duration-500"
+                  style={{ width: `${(completedSteps / setupSteps.length) * 100}%` }}
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {setupSteps.map((step) => {
+                  const stepClassName = `flex items-center gap-3 w-full p-3 rounded-lg transition-colors text-left ${
+                    step.completed 
+                      ? 'bg-success/10 cursor-default' 
+                      : 'bg-card hover:bg-muted/50 cursor-pointer border border-border'
+                  }`;
+
+                  const content = (
+                    <>
+                      {step.completed ? (
+                        <CircleCheck className="h-5 w-5 text-success shrink-0" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium ${step.completed ? 'text-success' : 'text-foreground'}`}>
+                          {step.label}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {step.description}
+                        </p>
+                      </div>
+                      {!step.completed && (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                    </>
+                  );
+
+                  if (step.link) {
+                    return (
+                      <Link key={step.id} to={step.link} className={stepClassName}>
+                        {content}
+                      </Link>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={step.id}
+                      type="button"
+                      onClick={step.action}
+                      className={stepClassName}
+                    >
+                      {content}
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Unified Action Cards */}
         <div className="grid gap-4 sm:grid-cols-2">
