@@ -91,6 +91,14 @@ export function InviteWizard({
       toast({ title: 'Phone number is required', variant: 'destructive' });
       return false;
     }
+    if (screeningConfig?.require_instagram && !instagram.trim()) {
+      toast({ title: 'Instagram handle is required', variant: 'destructive' });
+      return false;
+    }
+    if (screeningConfig?.require_telegram && !telegram.trim()) {
+      toast({ title: 'Telegram username is required', variant: 'destructive' });
+      return false;
+    }
     return true;
   };
 
@@ -164,28 +172,44 @@ export function InviteWizard({
   };
 
   const renderQuestionInput = (question: CatalogQuestion) => {
-    const answersJson = question.answers_json as { options?: string[] } | null;
+    // answers_json can be a flat array of strings or an object with options key
+    const answersJson = question.answers_json;
+    let options: string[] = [];
     
-    if (question.type === 'boolean') {
+    if (Array.isArray(answersJson)) {
+      options = answersJson.filter((item): item is string => typeof item === 'string');
+    } else if (answersJson && typeof answersJson === 'object' && 'options' in answersJson) {
+      const rawOptions = (answersJson as { options?: unknown[] }).options;
+      if (Array.isArray(rawOptions)) {
+        options = rawOptions.filter((item): item is string => typeof item === 'string');
+      }
+    }
+    
+    if (question.type === 'boolean' || question.type === 'yes_no') {
       return (
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id={question.id}
-            checked={answers[question.id] === true}
-            onCheckedChange={(checked) => updateAnswer(question.id, checked)}
-          />
-          <Label htmlFor={question.id} className="text-sm">Yes</Label>
-        </div>
+        <RadioGroup
+          value={answers[question.id] === true ? 'yes' : answers[question.id] === false ? 'no' : ''}
+          onValueChange={(value) => updateAnswer(question.id, value === 'yes')}
+        >
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="yes" id={`${question.id}-yes`} />
+            <Label htmlFor={`${question.id}-yes`} className="text-sm">Yes</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="no" id={`${question.id}-no`} />
+            <Label htmlFor={`${question.id}-no`} className="text-sm">No</Label>
+          </div>
+        </RadioGroup>
       );
     }
 
-    if (question.type === 'single_choice' && answersJson?.options) {
+    if (question.type === 'single_choice' && options.length > 0) {
       return (
         <RadioGroup
           value={answers[question.id] as string || ''}
           onValueChange={(value) => updateAnswer(question.id, value)}
         >
-          {answersJson.options.map((option) => (
+          {options.map((option) => (
             <div key={option} className="flex items-center gap-2">
               <RadioGroupItem value={option} id={`${question.id}-${option}`} />
               <Label htmlFor={`${question.id}-${option}`} className="text-sm">{option}</Label>
@@ -195,11 +219,11 @@ export function InviteWizard({
       );
     }
 
-    if (question.type === 'multi_choice' && answersJson?.options) {
+    if (question.type === 'multi_choice' && options.length > 0) {
       const selected = (answers[question.id] as string[]) || [];
       return (
         <div className="space-y-2">
-          {answersJson.options.map((option) => (
+          {options.map((option) => (
             <div key={option} className="flex items-center gap-2">
               <Checkbox
                 id={`${question.id}-${option}`}
@@ -216,6 +240,17 @@ export function InviteWizard({
             </div>
           ))}
         </div>
+      );
+    }
+
+    if (question.type === 'number') {
+      return (
+        <Input
+          type="number"
+          value={(answers[question.id] as string) || ''}
+          onChange={(e) => updateAnswer(question.id, e.target.value)}
+          placeholder="Enter a number..."
+        />
       );
     }
 
@@ -293,9 +328,11 @@ export function InviteWizard({
               />
             </div>
 
-            {screeningConfig?.allow_instagram && (
+            {(screeningConfig?.allow_instagram || screeningConfig?.require_instagram) && (
               <div className="space-y-2">
-                <Label htmlFor="instagram">Instagram Handle (optional)</Label>
+                <Label htmlFor="instagram">
+                  Instagram Handle {screeningConfig?.require_instagram ? '*' : '(optional)'}
+                </Label>
                 <Input
                   id="instagram"
                   value={instagram}
@@ -305,9 +342,11 @@ export function InviteWizard({
               </div>
             )}
 
-            {screeningConfig?.allow_telegram && (
+            {(screeningConfig?.allow_telegram || screeningConfig?.require_telegram) && (
               <div className="space-y-2">
-                <Label htmlFor="telegram">Telegram Username (optional)</Label>
+                <Label htmlFor="telegram">
+                  Telegram Username {screeningConfig?.require_telegram ? '*' : '(optional)'}
+                </Label>
                 <Input
                   id="telegram"
                   value={telegram}

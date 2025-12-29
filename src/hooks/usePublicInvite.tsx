@@ -56,6 +56,20 @@ export function usePublicInvite(token: string | undefined) {
 
         setInviteLink(linkData);
 
+        // Get schedule to check if active
+        const { data: scheduleData } = await supabase
+          .from('schedules')
+          .select('user_id, is_active')
+          .eq('id', linkData.schedule_id)
+          .single();
+
+        // Check if schedule is active
+        if (!scheduleData?.is_active) {
+          setError('This schedule is currently inactive');
+          setLoading(false);
+          return;
+        }
+
         // Fetch all related data in parallel
         const [
           slotsRes,
@@ -84,13 +98,6 @@ export function usePublicInvite(token: string | undefined) {
           supabase.from('catalog_boundary_tags').select('*').eq('is_active', true).order('sort_order'),
           supabase.from('catalog_questions').select('*').eq('is_active', true).order('sort_order'),
         ]);
-
-        // Get schedule to find profile
-        const { data: scheduleData } = await supabase
-          .from('schedules')
-          .select('user_id')
-          .eq('id', linkData.schedule_id)
-          .single();
 
         if (scheduleData) {
           const { data: profileData } = await supabase

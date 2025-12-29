@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Link2, Copy, Check, RefreshCw, Loader2, Globe, Clock, Zap, Calendar } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Link2, Copy, Check, RefreshCw, Loader2, Globe, Clock, Zap, Calendar, ChevronDown } from 'lucide-react';
 import { useInviteLinks, LinkType } from '@/hooks/useInviteLinks';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -44,6 +44,7 @@ export function InviteLinkCard({
   const { links, loading, refreshLink, getInviteUrl, getPublicProfileUrl } = useInviteLinks(scheduleId);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<LinkType | null>(null);
+  const [showOtherLinks, setShowOtherLinks] = useState(false);
 
   const handleCopy = async (url: string, id: string) => {
     await navigator.clipboard.writeText(url);
@@ -64,6 +65,61 @@ export function InviteLinkCard({
     }
   };
 
+  const renderLinkRow = (linkType: LinkType) => {
+    const link = links[linkType];
+    const Icon = LINK_ICONS[linkType];
+    const url = link ? getInviteUrl(link.token) : '';
+    const id = link?.id || linkType;
+    
+    return (
+      <div key={linkType} className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">{LINK_LABELS[linkType]}</span>
+            {link?.expires_at && (
+              <Badge variant="outline" className="text-xs">
+                Expires {format(new Date(link.expires_at), 'MMM d')}
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">{LINK_DESCRIPTIONS[linkType]}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Input
+            readOnly
+            value={url}
+            className="text-sm bg-muted/50 font-mono"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleCopy(url, id)}
+            disabled={!link}
+          >
+            {copiedId === id ? (
+              <Check className="h-4 w-4 text-success" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleRefresh(linkType)}
+            disabled={refreshing === linkType}
+          >
+            {refreshing === linkType ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <Card>
@@ -74,7 +130,6 @@ export function InviteLinkCard({
     );
   }
 
-  const linkTypes: LinkType[] = ['one_time', '3_day', '7_day'];
   const publicUrl = getPublicProfileUrl(handle);
 
   return (
@@ -89,61 +144,22 @@ export function InviteLinkCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Token-based links */}
-        {linkTypes.map((linkType) => {
-          const link = links[linkType];
-          const Icon = LINK_ICONS[linkType];
-          const url = link ? getInviteUrl(link.token) : '';
-          const id = link?.id || linkType;
-          
-          return (
-            <div key={linkType} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{LINK_LABELS[linkType]}</span>
-                  {link?.expires_at && (
-                    <Badge variant="outline" className="text-xs">
-                      Expires {format(new Date(link.expires_at), 'MMM d')}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">{LINK_DESCRIPTIONS[linkType]}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  readOnly
-                  value={url}
-                  className="text-sm bg-muted/50 font-mono"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleCopy(url, id)}
-                  disabled={!link}
-                >
-                  {copiedId === id ? (
-                    <Check className="h-4 w-4 text-success" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRefresh(linkType)}
-                  disabled={refreshing === linkType}
-                >
-                  {refreshing === linkType ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-          );
-        })}
+        {/* 7-day link as main */}
+        {renderLinkRow('7_day')}
+
+        {/* Other links collapsed */}
+        <Collapsible open={showOtherLinks} onOpenChange={setShowOtherLinks}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground">
+              <span>Other link options</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${showOtherLinks ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-4 pt-4">
+            {renderLinkRow('3_day')}
+            {renderLinkRow('one_time')}
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Public profile toggle */}
         <div className="pt-4 border-t border-border">

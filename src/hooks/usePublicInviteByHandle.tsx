@@ -59,13 +59,20 @@ export function usePublicInviteByHandle(handle: string | undefined) {
         // Fetch schedule for this user
         const { data: scheduleData, error: scheduleError } = await supabase
           .from('schedules')
-          .select('id')
+          .select('id, is_active')
           .eq('user_id', profileData.id)
           .maybeSingle();
 
         if (scheduleError) throw scheduleError;
         if (!scheduleData) {
           setError('No schedule found');
+          setLoading(false);
+          return;
+        }
+
+        // Check if schedule is active
+        if (!scheduleData.is_active) {
+          setError('This schedule is currently inactive');
           setLoading(false);
           return;
         }
