@@ -10,7 +10,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ScreeningConfigCard } from '@/components/settings/ScreeningConfigCard';
 import { PhotoUpload } from '@/components/settings/PhotoUpload';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -221,7 +220,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <ScreeningConfigCard />
+          {/* Screening config moved to Schedule page */}
 
           <Card>
             <CardHeader>
