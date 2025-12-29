@@ -14,6 +14,7 @@ import Settings from "./pages/Settings";
 import DemoInvite from "./pages/DemoInvite";
 import DemoSafetyPack from "./pages/DemoSafetyPack";
 import PublicInvite from "./pages/PublicInvite";
+import PublicInviteByHandle from "./pages/PublicInviteByHandle";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/demo/invite" element={<DemoInvite />} />
             <Route path="/demo/safety-pack" element={<DemoSafetyPack />} />
             <Route path="/i/:token" element={<PublicInvite />} />
+            <Route path="/invite/:handle" element={<PublicInviteByHandle />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
