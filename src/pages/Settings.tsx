@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Heart, ArrowLeft, User, Bell, Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Heart, ArrowLeft, User, Bell, Loader2, Globe } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,6 +27,7 @@ export default function Settings() {
   const [handle, setHandle] = useState('');
   const [bioOneLiner, setBioOneLiner] = useState('');
   const [cityLabel, setCityLabel] = useState('');
+  const [publicProfileEnabled, setPublicProfileEnabled] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -54,6 +56,7 @@ export default function Settings() {
       setHandle(data.handle || '');
       setBioOneLiner(data.bio_one_liner || '');
       setCityLabel(data.city_label || '');
+      setPublicProfileEnabled(data.public_profile_enabled || false);
     }
     setLoading(false);
   };
@@ -69,6 +72,7 @@ export default function Settings() {
         handle: handle.toLowerCase().replace(/[^a-z0-9_]/g, ''),
         bio_one_liner: bioOneLiner,
         city_label: cityLabel,
+        public_profile_enabled: publicProfileEnabled,
       })
       .eq('id', user.id);
 
@@ -176,6 +180,23 @@ export default function Settings() {
                   value={cityLabel}
                   onChange={(e) => setCityLabel(e.target.value)}
                   placeholder="e.g., San Francisco, CA"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t">
+                <div className="space-y-0.5">
+                  <Label htmlFor="publicProfile" className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    Public Profile
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Allow others to find you via your invite link
+                  </p>
+                </div>
+                <Switch
+                  id="publicProfile"
+                  checked={publicProfileEnabled}
+                  onCheckedChange={setPublicProfileEnabled}
                 />
               </div>
 
