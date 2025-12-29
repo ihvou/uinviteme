@@ -10,6 +10,8 @@ import Dashboard from "./pages/Dashboard";
 import Schedule from "./pages/Schedule";
 import Invites from "./pages/Invites";
 import Dates from "./pages/Dates";
+import DateDetail from "./pages/DateDetail";
+import DateSafetyPack from "./pages/DateSafetyPack";
 import Settings from "./pages/Settings";
 import DemoInvite from "./pages/DemoInvite";
 import DemoSafetyPack from "./pages/DemoSafetyPack";
@@ -31,6 +33,8 @@ const App = () => (
             <Route path="/schedule" element={<Schedule />} />
             <Route path="/invites" element={<Invites />} />
             <Route path="/dates" element={<Dates />} />
+            <Route path="/dates/:dateId" element={<DateDetail />} />
+            <Route path="/dates/:dateId/safety" element={<DateSafetyPack />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
