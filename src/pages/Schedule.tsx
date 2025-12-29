@@ -5,12 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Heart, ArrowLeft, Calendar, Plus, Loader2, Pencil, Trash2, Coffee, Wine, Footprints, Utensils, Palette, Activity, Music, Sun, Bike, MoreHorizontal } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Heart, ArrowLeft, Calendar, Plus, Loader2, Pencil, Trash2, Coffee, Wine, Footprints, Utensils, Palette, Activity, Music, Sun, Bike, MoreHorizontal, Power } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SlotFormDialog } from '@/components/schedule/SlotFormDialog';
-import { InviteLinkCard } from '@/components/schedule/InviteLinkCard';
+import { ScreeningConfigCard } from '@/components/settings/ScreeningConfigCard';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -41,12 +44,38 @@ export default function Schedule() {
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState<Slot | null>(null);
+  const [isActive, setIsActive] = useState(false);
+  const [togglingActive, setTogglingActive] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (schedule) {
+      setIsActive(schedule.is_active ?? false);
+    }
+  }, [schedule]);
+
+  const handleToggleActive = async (enabled: boolean) => {
+    if (!schedule) return;
+    setTogglingActive(true);
+    
+    const { error } = await supabase
+      .from('schedules')
+      .update({ is_active: enabled })
+      .eq('id', schedule.id);
+    
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to update schedule status', variant: 'destructive' });
+    } else {
+      setIsActive(enabled);
+      toast({ title: enabled ? 'Schedule activated' : 'Schedule deactivated' });
+    }
+    setTogglingActive(false);
+  };
 
   if (authLoading || loading) {
     return (
@@ -134,7 +163,7 @@ export default function Schedule() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
           <Link to="/dashboard" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4">
             <ArrowLeft className="h-4 w-4" />
@@ -142,17 +171,45 @@ export default function Schedule() {
           </Link>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="font-display text-3xl font-bold text-foreground mb-2">My Schedule</h1>
+              <h1 className="font-display text-3xl font-bold text-foreground mb-2">Schedule & Expectations</h1>
               <p className="text-muted-foreground">
-                Configure your weekly availability slots
+                Configure your availability and screening preferences
               </p>
             </div>
-            <Button onClick={handleAdd}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Slot
-            </Button>
           </div>
         </div>
+
+        {/* Schedule Active Toggle */}
+        <Card className="mb-6">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isActive ? 'bg-success/10' : 'bg-muted'}`}>
+                  <Power className={`h-5 w-5 ${isActive ? 'text-success' : 'text-muted-foreground'}`} />
+                </div>
+                <div>
+                  <Label htmlFor="schedule-active" className="text-base font-semibold">
+                    Schedule Status
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {isActive ? 'Your schedule is visible and accepting invites' : 'Your schedule is hidden from invitees'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge variant={isActive ? 'default' : 'secondary'}>
+                  {isActive ? 'Active' : 'Inactive'}
+                </Badge>
+                <Switch
+                  id="schedule-active"
+                  checked={isActive}
+                  onCheckedChange={handleToggleActive}
+                  disabled={togglingActive}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {error && (
           <Card className="mb-6 border-destructive">
@@ -162,15 +219,24 @@ export default function Schedule() {
           </Card>
         )}
 
-        <Card>
+        {/* Weekly Slots */}
+        <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Weekly Slots
-            </CardTitle>
-            <CardDescription>
-              Define when you're available for dates. Showing the next 7 days, updated automatically.
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Weekly Slots
+                </CardTitle>
+                <CardDescription>
+                  Define when you're available for dates
+                </CardDescription>
+              </div>
+              <Button onClick={handleAdd}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Slot
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {slots.length === 0 ? (
@@ -250,9 +316,8 @@ export default function Schedule() {
           </CardContent>
         </Card>
 
-        <div className="mt-6">
-          <InviteLinkCard scheduleId={schedule?.id || null} />
-        </div>
+        {/* Screening Configuration */}
+        <ScreeningConfigCard />
       </main>
 
       <SlotFormDialog
