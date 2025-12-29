@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Calendar, Shield, CheckCircle, MessageCircle, Clock, Phone, AlertTriangle, Heart, ArrowRight } from 'lucide-react';
+import { Calendar, Shield, CheckCircle, MessageCircle, Clock, Phone, AlertTriangle, Heart, ArrowRight, Lock } from 'lucide-react';
 
 export default function Landing() {
   return (
@@ -17,21 +17,21 @@ export default function Landing() {
               <Button variant="ghost">Sign In</Button>
             </Link>
             <Link to="/auth?mode=signup">
-              <Button>Get Started</Button>
+              <Button>Create my invite page</Button>
             </Link>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4">
+      <section className="pt-32 pb-16 px-4">
         <div className="container mx-auto text-center max-w-4xl">
           <div className="animate-fade-in">
             <h1 className="font-display text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
               Plans, not penpals.
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-4 max-w-2xl mx-auto">
-              Share your weekly invite page. Get invites from people ready to meet—with boundaries up front. Activate a Safety Pack when you accept.
+            <p className="text-lg md:text-xl text-muted-foreground mb-2 max-w-2xl mx-auto">
+              A shareable weekly invite page that pre-qualifies dates—plus a Safety Pack you can activate when you accept.
             </p>
             <p className="text-sm text-muted-foreground/70 mb-8">
               Not a dating app. Works with Tinder, Hinge, Instagram—anywhere you chat.
@@ -44,7 +44,7 @@ export default function Landing() {
               </Link>
               <Link to="/demo/invite">
                 <Button size="lg" variant="outline">
-                  See a live demo
+                  See live demo
                 </Button>
               </Link>
             </div>
@@ -52,8 +52,37 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* How it works */}
+      <section className="py-12 px-4">
+        <div className="container mx-auto max-w-4xl">
+          <h2 className="font-display text-xl font-semibold text-center text-foreground mb-8">
+            How it works
+          </h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                <span className="font-display font-bold text-primary">1</span>
+              </div>
+              <p className="text-sm text-muted-foreground">Create your weekly invite schedule</p>
+            </div>
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                <span className="font-display font-bold text-primary">2</span>
+              </div>
+              <p className="text-sm text-muted-foreground">Share the link anywhere you chat</p>
+            </div>
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                <span className="font-display font-bold text-primary">3</span>
+              </div>
+              <p className="text-sm text-muted-foreground">Accept someone—Safety Pack appears</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Use Case 1: Invite Schedule */}
-      <section className="py-20 px-4 bg-card">
+      <section className="py-16 px-4 bg-card">
         <div className="container mx-auto max-w-5xl">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
@@ -84,7 +113,7 @@ export default function Landing() {
               <div className="mt-8">
                 <Link to="/demo/invite">
                   <Button variant="outline" className="gap-2">
-                    Try the demo <ArrowRight className="h-4 w-4" />
+                    See live demo <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
               </div>
@@ -125,7 +154,7 @@ export default function Landing() {
       </section>
 
       {/* Use Case 2: Date Safety Pack */}
-      <section className="py-20 px-4">
+      <section className="py-16 px-4">
         <div className="container mx-auto max-w-5xl">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="order-2 md:order-1 bg-background rounded-2xl p-8 shadow-lg border border-border">
@@ -179,10 +208,14 @@ export default function Landing() {
                   <span className="text-muted-foreground">Escalation SMS if you don't check in (only after you activate).</span>
                 </li>
               </ul>
+              <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground">
+                <Lock className="h-4 w-4" />
+                <span>Private by default. You choose if/when to activate—and who gets notified.</span>
+              </div>
               <div className="mt-8">
                 <Link to="/demo/safety-pack">
                   <Button variant="outline" className="gap-2">
-                    See the Safety Pack <ArrowRight className="h-4 w-4" />
+                    See live demo <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
               </div>
@@ -191,17 +224,14 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-hero">
+      {/* CTA Section - Slimmed down */}
+      <section className="py-12 px-4 bg-card border-y border-border">
         <div className="container mx-auto text-center max-w-2xl">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-            Ready to meet, not just match?
-          </h2>
-          <p className="text-primary-foreground/80 text-lg mb-8">
+          <p className="text-muted-foreground mb-4">
             Create your invite page in under 2 minutes.
           </p>
           <Link to="/auth?mode=signup">
-            <Button size="lg" variant="secondary" className="gap-2">
+            <Button size="lg" className="gap-2">
               Create my invite page <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
@@ -209,7 +239,7 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 bg-card border-t border-border">
+      <footer className="py-12 px-4 bg-card">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
