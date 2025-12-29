@@ -662,9 +662,11 @@ export type Database = {
           created_at: string | null
           enabled_questions: Json | null
           id: string
+          require_instagram: boolean | null
           require_phone: boolean | null
           require_selfie: boolean | null
           require_social_link: boolean | null
+          require_telegram: boolean | null
           schedule_id: string
           updated_at: string | null
         }
@@ -676,9 +678,11 @@ export type Database = {
           created_at?: string | null
           enabled_questions?: Json | null
           id?: string
+          require_instagram?: boolean | null
           require_phone?: boolean | null
           require_selfie?: boolean | null
           require_social_link?: boolean | null
+          require_telegram?: boolean | null
           schedule_id: string
           updated_at?: string | null
         }
@@ -690,9 +694,11 @@ export type Database = {
           created_at?: string | null
           enabled_questions?: Json | null
           id?: string
+          require_instagram?: boolean | null
           require_phone?: boolean | null
           require_selfie?: boolean | null
           require_social_link?: boolean | null
+          require_telegram?: boolean | null
           schedule_id?: string
           updated_at?: string | null
         }
