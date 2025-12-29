@@ -110,12 +110,13 @@ export default function Dates() {
               </div>
             ) : (
               <div className="space-y-4">
-                {dates.map((dateRecord) => {
+{dates.map((dateRecord) => {
                   const invitee = dateRecord.invitee_snapshot as unknown as InviteeSnapshot;
                   return (
-                    <div 
+                    <Link 
                       key={dateRecord.id} 
-                      className="border border-border rounded-lg p-4 space-y-3"
+                      to={`/dates/${dateRecord.id}`}
+                      className="block border border-border rounded-lg p-4 space-y-3 hover:border-primary/50 hover:bg-card/50 transition-colors"
                     >
                       <div className="flex items-start justify-between">
                         <div>
@@ -143,7 +144,7 @@ export default function Dates() {
                           IG: {invitee.instagram_handle}
                         </p>
                       )}
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
