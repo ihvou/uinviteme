@@ -297,7 +297,7 @@ I'll check in by ${checkinTime ? format(parse(checkinTime, 'HH:mm', new Date()),
             </CardHeader>
             <CardContent>
               <div className="p-4 bg-secondary/50 rounded-lg space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="checkin_time">Check-in time</Label>
                     <Input
