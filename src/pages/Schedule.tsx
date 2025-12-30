@@ -249,69 +249,127 @@ export default function Schedule() {
                 </Button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Day</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Area</TableHead>
-                      <TableHead>Format</TableHead>
-                      <TableHead>Intent</TableHead>
-                      <TableHead>Vibe</TableHead>
-                      <TableHead>Boundaries</TableHead>
-                      <TableHead className="w-24"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {slots.map((slot) => (
-                      <TableRow key={slot.id}>
-                        <TableCell className="font-medium">
-                          {WEEKDAY_LABELS[slot.weekday]}
-                        </TableCell>
-                        <TableCell>{TIME_BUCKET_LABELS[slot.time_bucket]}</TableCell>
-                        <TableCell>{slot.area_label}</TableCell>
-                        <TableCell>{getFormatLabel(slot.format)}</TableCell>
-                        <TableCell>
-                          {getIntentTagLabel(slot.intent_tag) && (
-                            <Badge variant="outline" className="border-primary/30 text-primary text-xs">
-                              {getIntentTagLabel(slot.intent_tag)}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {getVibeTagLabels(slot.vibe_tags)?.map((label) => (
-                              <Badge key={label} variant="secondary" className="text-xs">
-                                {label}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {getBoundaryTagLabels(slot.boundary_tags)?.map((label) => (
-                              <Badge key={label} variant="outline" className="text-xs border-destructive/30 text-destructive">
-                                {label}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(slot)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(slot)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Day</TableHead>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Area</TableHead>
+                        <TableHead>Format</TableHead>
+                        <TableHead>Intent</TableHead>
+                        <TableHead>Vibe</TableHead>
+                        <TableHead>Boundaries</TableHead>
+                        <TableHead className="w-24"></TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {slots.map((slot) => (
+                        <TableRow key={slot.id}>
+                          <TableCell className="font-medium">
+                            {WEEKDAY_LABELS[slot.weekday]}
+                          </TableCell>
+                          <TableCell>{TIME_BUCKET_LABELS[slot.time_bucket]}</TableCell>
+                          <TableCell>{slot.area_label}</TableCell>
+                          <TableCell>{getFormatLabel(slot.format)}</TableCell>
+                          <TableCell>
+                            {getIntentTagLabel(slot.intent_tag) && (
+                              <Badge variant="outline" className="border-primary/30 text-primary text-xs">
+                                {getIntentTagLabel(slot.intent_tag)}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {getVibeTagLabels(slot.vibe_tags)?.map((label) => (
+                                <Badge key={label} variant="secondary" className="text-xs">
+                                  {label}
+                                </Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {getBoundaryTagLabels(slot.boundary_tags)?.map((label) => (
+                                <Badge key={label} variant="outline" className="text-xs border-destructive/30 text-destructive">
+                                  {label}
+                                </Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => handleEdit(slot)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDelete(slot)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {slots.map((slot) => (
+                    <div 
+                      key={slot.id} 
+                      className="p-4 bg-secondary/30 rounded-lg border border-border"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <span className="font-semibold text-primary text-sm">
+                              {WEEKDAY_LABELS[slot.weekday]}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">{TIME_BUCKET_LABELS[slot.time_bucket]}</p>
+                            <p className="text-sm text-muted-foreground">{slot.area_label}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(slot)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(slot)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-1.5">
+                        {getFormatLabel(slot.format) && (
+                          <Badge variant="secondary" className="text-xs">
+                            {getFormatLabel(slot.format)}
+                          </Badge>
+                        )}
+                        {getIntentTagLabel(slot.intent_tag) && (
+                          <Badge variant="outline" className="border-primary/30 text-primary text-xs">
+                            {getIntentTagLabel(slot.intent_tag)}
+                          </Badge>
+                        )}
+                        {getVibeTagLabels(slot.vibe_tags)?.map((label) => (
+                          <Badge key={label} variant="secondary" className="text-xs">
+                            {label}
+                          </Badge>
+                        ))}
+                        {getBoundaryTagLabels(slot.boundary_tags)?.map((label) => (
+                          <Badge key={label} variant="outline" className="text-xs border-destructive/30 text-destructive">
+                            {label}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
