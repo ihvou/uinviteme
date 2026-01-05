@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Calendar, Shield, CheckCircle, MessageCircle, Clock, Phone, AlertTriangle, Heart, ArrowRight, Lock } from 'lucide-react';
+import demoAvatar from '@/assets/demo-jamie.jpg';
 
 export default function Landing() {
   return (
@@ -63,37 +64,39 @@ export default function Landing() {
           </h2>
           <div className="grid md:grid-cols-2 gap-8">
             {/* Card 1 - DM shortcut */}
-            <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-lg">
+            <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-lg flex flex-col">
               {/* Mock Chat Illustration */}
-              <div className="bg-secondary/30 p-6">
-                <div className="bg-background rounded-2xl p-4 shadow-md max-w-xs mx-auto">
+              <div className="bg-secondary/30 p-4 h-52 flex items-center justify-center">
+                <div className="bg-background rounded-xl p-3 shadow-md w-full max-w-[260px]">
                   {/* Chat header */}
-                  <div className="flex items-center gap-3 pb-3 border-b border-border mb-4">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                      <span className="text-xs font-medium text-muted-foreground">A</span>
-                    </div>
+                  <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                    <img 
+                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" 
+                      alt="Alex" 
+                      className="w-7 h-7 rounded-full object-cover"
+                    />
                     <span className="font-medium text-sm">Alex</span>
                   </div>
                   {/* Messages */}
-                  <div className="space-y-3">
-                    <div className="bg-secondary/60 rounded-2xl rounded-tl-sm p-3 max-w-[85%]">
-                      <p className="text-sm text-foreground">Hey, you seem fun. Want to grab a drink sometime?</p>
+                  <div className="space-y-2">
+                    <div className="bg-secondary/60 rounded-xl rounded-tl-sm p-2 max-w-[85%]">
+                      <p className="text-xs text-foreground">Hey, you seem fun. Want to grab a drink sometime?</p>
                     </div>
-                    <div className="bg-primary/10 rounded-2xl rounded-tr-sm p-3 max-w-[85%] ml-auto">
-                      <p className="text-sm text-foreground">I'm open this week. Pick a slot here: <span className="underline font-medium">uinvite.me/crystal</span></p>
+                    <div className="bg-primary/10 rounded-xl rounded-tr-sm p-2 max-w-[85%] ml-auto">
+                      <p className="text-xs text-foreground">I'm open this week. Pick a slot here: <span className="underline font-medium">uinvite.me/crystal</span></p>
                     </div>
-                    <div className="bg-secondary/60 rounded-2xl rounded-tl-sm p-3 max-w-[85%]">
-                      <p className="text-sm text-foreground">Done ✅ Requested Wed evening.</p>
+                    <div className="bg-secondary/60 rounded-xl rounded-tl-sm p-2 max-w-[85%]">
+                      <p className="text-xs text-foreground">Done ✅ Requested Wed evening.</p>
                     </div>
                   </div>
                 </div>
               </div>
               {/* Card Content */}
-              <div className="p-6">
+              <div className="p-6 flex-1 flex flex-col">
                 <h3 className="font-display text-xl font-semibold text-foreground mb-3">
                   Turn a DM into a plan.
                 </h3>
-                <p className="text-muted-foreground text-sm mb-4">
+                <p className="text-muted-foreground text-sm mb-4 flex-1">
                   When someone messages you on Instagram (or anywhere), reply with your uInvite link. They pick a time slot + answer a few questions. You decide who to accept.
                 </p>
                 <p className="text-sm font-medium text-primary">
@@ -103,29 +106,31 @@ export default function Landing() {
             </div>
 
             {/* Card 2 - Bio link */}
-            <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-lg">
+            <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-lg flex flex-col">
               {/* Mock Profile Illustration */}
-              <div className="bg-secondary/30 p-6">
-                <div className="bg-background rounded-2xl p-4 shadow-md max-w-xs mx-auto">
+              <div className="bg-secondary/30 p-4 h-52 flex items-center justify-center">
+                <div className="bg-background rounded-xl p-3 shadow-md w-full max-w-[260px]">
                   {/* Profile header */}
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                      <span className="text-2xl font-semibold text-primary/60">C</span>
-                    </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <img 
+                      src={demoAvatar} 
+                      alt="Crystal" 
+                      className="w-12 h-12 rounded-lg object-cover"
+                    />
                     <div>
-                      <p className="font-semibold text-foreground">CRYSTAL</p>
-                      <p className="text-sm text-muted-foreground">San Francisco, CA</p>
+                      <p className="font-semibold text-sm text-foreground">CRYSTAL</p>
+                      <p className="text-xs text-muted-foreground">San Francisco, CA</p>
                     </div>
                   </div>
                   {/* Tags */}
-                  <div className="flex gap-2 mb-4">
-                    <span className="text-xs px-2 py-1 bg-secondary/60 rounded-full text-muted-foreground">Drinks</span>
-                    <span className="text-xs px-2 py-1 bg-secondary/60 rounded-full text-muted-foreground">Travel</span>
-                    <span className="text-xs px-2 py-1 bg-secondary/60 rounded-full text-muted-foreground">Coffee</span>
+                  <div className="flex gap-1.5 mb-3">
+                    <span className="text-xs px-2 py-0.5 bg-secondary/60 rounded-full text-muted-foreground">Drinks</span>
+                    <span className="text-xs px-2 py-0.5 bg-secondary/60 rounded-full text-muted-foreground">Travel</span>
+                    <span className="text-xs px-2 py-0.5 bg-secondary/60 rounded-full text-muted-foreground">Coffee</span>
                   </div>
                   {/* Bio */}
-                  <div className="bg-secondary/40 rounded-lg p-3">
-                    <p className="text-sm text-foreground">
+                  <div className="bg-secondary/40 rounded-lg p-2">
+                    <p className="text-xs text-foreground">
                       Not into endless texting.<br />
                       If you want to meet, request a slot: <span className="underline font-medium">uinvite.me/crystal</span>
                     </p>
@@ -133,11 +138,11 @@ export default function Landing() {
                 </div>
               </div>
               {/* Card Content */}
-              <div className="p-6">
+              <div className="p-6 flex-1 flex flex-col">
                 <h3 className="font-display text-xl font-semibold text-foreground mb-3">
                   Your bio, but with boundaries.
                 </h3>
-                <p className="text-muted-foreground text-sm mb-4">
+                <p className="text-muted-foreground text-sm mb-4 flex-1">
                   Put your uInvite link in your dating bio. It signals you're open to meet—and filters out people who aren't ready.
                 </p>
                 <p className="text-sm font-medium text-primary">
