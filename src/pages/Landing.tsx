@@ -55,30 +55,95 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="py-12 px-4">
-        <div className="container mx-auto max-w-4xl">
-          <h2 className="font-display text-xl font-semibold text-center text-foreground mb-8">
-            How it works
+      {/* Use Cases */}
+      <section className="py-16 px-4">
+        <div className="container mx-auto max-w-5xl">
+          <h2 className="font-display text-2xl md:text-3xl font-semibold text-center text-foreground mb-12">
+            Use cases
           </h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <span className="font-display font-bold text-primary">1</span>
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Card 1 - DM shortcut */}
+            <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-lg">
+              {/* Mock Chat Illustration */}
+              <div className="bg-secondary/30 p-6">
+                <div className="bg-background rounded-2xl p-4 shadow-md max-w-xs mx-auto">
+                  {/* Chat header */}
+                  <div className="flex items-center gap-3 pb-3 border-b border-border mb-4">
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                      <span className="text-xs font-medium text-muted-foreground">A</span>
+                    </div>
+                    <span className="font-medium text-sm">Alex</span>
+                  </div>
+                  {/* Messages */}
+                  <div className="space-y-3">
+                    <div className="bg-secondary/60 rounded-2xl rounded-tl-sm p-3 max-w-[85%]">
+                      <p className="text-sm text-foreground">Hey, you seem fun. Want to grab a drink sometime?</p>
+                    </div>
+                    <div className="bg-primary/10 rounded-2xl rounded-tr-sm p-3 max-w-[85%] ml-auto">
+                      <p className="text-sm text-foreground">I'm open this week. Pick a slot here: <span className="underline font-medium">uinvite.me/crystal</span></p>
+                    </div>
+                    <div className="bg-secondary/60 rounded-2xl rounded-tl-sm p-3 max-w-[85%]">
+                      <p className="text-sm text-foreground">Done ✅ Requested Wed evening.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground">Set your weekly availability, area, and vibe</p>
+              {/* Card Content */}
+              <div className="p-6">
+                <h3 className="font-display text-xl font-semibold text-foreground mb-3">
+                  Turn a DM into a plan.
+                </h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  When someone messages you on Instagram (or anywhere), reply with your uInvite link. They pick a time slot + answer a few questions. You decide who to accept.
+                </p>
+                <p className="text-sm font-medium text-primary">
+                  Less chatting. More real meetups.
+                </p>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <span className="font-display font-bold text-primary">2</span>
+
+            {/* Card 2 - Bio link */}
+            <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-lg">
+              {/* Mock Profile Illustration */}
+              <div className="bg-secondary/30 p-6">
+                <div className="bg-background rounded-2xl p-4 shadow-md max-w-xs mx-auto">
+                  {/* Profile header */}
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                      <span className="text-2xl font-semibold text-primary/60">C</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">CRYSTAL</p>
+                      <p className="text-sm text-muted-foreground">San Francisco, CA</p>
+                    </div>
+                  </div>
+                  {/* Tags */}
+                  <div className="flex gap-2 mb-4">
+                    <span className="text-xs px-2 py-1 bg-secondary/60 rounded-full text-muted-foreground">Drinks</span>
+                    <span className="text-xs px-2 py-1 bg-secondary/60 rounded-full text-muted-foreground">Travel</span>
+                    <span className="text-xs px-2 py-1 bg-secondary/60 rounded-full text-muted-foreground">Coffee</span>
+                  </div>
+                  {/* Bio */}
+                  <div className="bg-secondary/40 rounded-lg p-3">
+                    <p className="text-sm text-foreground">
+                      Not into endless texting.<br />
+                      If you want to meet, request a slot: <span className="underline font-medium">uinvite.me/crystal</span>
+                    </p>
+                  </div>
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground">Share the link in chats or your bio</p>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <span className="font-display font-bold text-primary">3</span>
+              {/* Card Content */}
+              <div className="p-6">
+                <h3 className="font-display text-xl font-semibold text-foreground mb-3">
+                  Your bio, but with boundaries.
+                </h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  Put your uInvite link in your dating bio. It signals you're open to meet—and filters out people who aren't ready.
+                </p>
+                <p className="text-sm font-medium text-primary">
+                  Attract better invites from day one.
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">Accept an invite—Safety Pack activates</p>
             </div>
           </div>
         </div>
