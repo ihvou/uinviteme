@@ -28,10 +28,13 @@ export default function Landing() {
         <div className="container mx-auto text-center max-w-4xl">
           <div className="animate-fade-in">
             <h1 className="font-display text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
-              Plans, not penpals.
+              Skip the small talk.
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-2 max-w-2xl mx-auto">
-              A shareable weekly invite page that pre-qualifies dates—plus a Safety Pack you can activate when you accept.
+              Pre-qualify meetups with a shareable invite page. Show your availability, expectations, and dealbreakers—then activate a Safety Pack when you accept.
+            </p>
+            <p className="text-sm text-muted-foreground/70 mb-2">
+              Share it in DMs or add to your bio to attract invites beyond your matches.
             </p>
             <p className="text-sm text-muted-foreground/70 mb-8">
               Not a dating app. Works with Tinder, Hinge, Instagram—anywhere you chat.
@@ -63,19 +66,19 @@ export default function Landing() {
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
                 <span className="font-display font-bold text-primary">1</span>
               </div>
-              <p className="text-sm text-muted-foreground">Create your weekly invite schedule</p>
+              <p className="text-sm text-muted-foreground">Set your weekly availability, area, and vibe</p>
             </div>
             <div className="text-center">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
                 <span className="font-display font-bold text-primary">2</span>
               </div>
-              <p className="text-sm text-muted-foreground">Share the link anywhere you chat</p>
+              <p className="text-sm text-muted-foreground">Share the link in chats or your bio</p>
             </div>
             <div className="text-center">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
                 <span className="font-display font-bold text-primary">3</span>
               </div>
-              <p className="text-sm text-muted-foreground">Accept someone—Safety Pack appears</p>
+              <p className="text-sm text-muted-foreground">Accept an invite—Safety Pack activates</p>
             </div>
           </div>
         </div>
@@ -90,24 +93,24 @@ export default function Landing() {
                 <Calendar className="h-6 w-6 text-primary" />
               </div>
               <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-6">
-                Invite Schedule
+                Your Week, Your Terms
               </h2>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Signal you're open to meet this week.</span>
+                  <span className="text-muted-foreground">Show open slots for the next 7 days—invitees pick one that works.</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Filter for people who are ready and aligned (no endless chat).</span>
+                  <span className="text-muted-foreground">Set your area and format (coffee, drinks, dinner, activity).</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Set boundaries and vibe up front (format, tags, dealbreakers).</span>
+                  <span className="text-muted-foreground">Tag each slot with vibe and intent—filter for readiness, not just interest.</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Pick from a shortlist of invites—not random likes.</span>
+                  <span className="text-muted-foreground">Surface dealbreakers before meeting—skip the awkward mismatch.</span>
                 </li>
               </ul>
               <div className="mt-8">
@@ -188,29 +191,29 @@ export default function Landing() {
                 <Shield className="h-6 w-6 text-accent" />
               </div>
               <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-6">
-                Date Safety Pack
+                Meet with backup.
               </h2>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Copy a ready message to trusted contacts.</span>
+                  <span className="text-muted-foreground">Require phone validation—verify invitees before accepting.</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">One default check-in time (editable).</span>
+                  <span className="text-muted-foreground">Copy a share-ready message with time, place, and invitee details to a trusted contact.</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Discreet SMS links: All good / Call me / Emergency.</span>
+                  <span className="text-muted-foreground">Get a check-in SMS with discreet links: All good / Call me / Emergency.</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">Escalation SMS if you don't check in (only after you activate).</span>
+                  <span className="text-muted-foreground">Miss check-in? Your trusted contact gets an automatic alert.</span>
                 </li>
               </ul>
               <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground">
                 <Lock className="h-4 w-4" />
-                <span>Private by default. You choose if/when to activate—and who gets notified.</span>
+                <span>You activate it. You control who knows.</span>
               </div>
               <div className="mt-8">
                 <Link to="/demo/safety-pack">
@@ -228,7 +231,7 @@ export default function Landing() {
       <section className="py-12 px-4 bg-card border-y border-border">
         <div className="container mx-auto text-center max-w-2xl">
           <p className="text-muted-foreground mb-4">
-            Create your invite page in under 2 minutes.
+            Ready in 2 minutes. Share anywhere.
           </p>
           <Link to="/auth?mode=signup">
             <Button size="lg" className="gap-2">
