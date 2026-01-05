@@ -18,7 +18,10 @@ export default function Landing() {
               <Button variant="ghost">Sign In</Button>
             </Link>
             <Link to="/auth?mode=signup">
-              <Button>Create my invite page</Button>
+              <Button>
+                <span className="sm:hidden">Create</span>
+                <span className="hidden sm:inline">Create my invite page</span>
+              </Button>
             </Link>
           </div>
         </div>
