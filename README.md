@@ -1,73 +1,110 @@
-# Welcome to your Lovable project
+# uInvite.Me
 
-## Project info
+uInvite.Me is a Vite, React, TypeScript, shadcn/ui, Tailwind, and Supabase application for turning dating chats into structured invite requests. A host publishes availability, expectations, and screening questions; a visitor requests a slot; the host accepts or declines; accepted invites become dates with a Safety Pack workflow.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+The app was originally generated in Lovable, but the current runtime is independent:
 
-## How can I edit this code?
+- Frontend hosting: Cloudflare Pages
+- Source control: GitHub repo `ihvou/uinviteme`
+- Backend: Supabase Auth, Postgres, Storage, and future Edge Functions
+- Production URL: <https://uinviteme.pages.dev/>
 
-There are several ways of editing your application.
+## Documentation
 
-**Use Lovable**
+- [Architecture](docs/architecture.md)
+- [User Journey Scenarios](docs/user-journeys.md)
+- [Production MVP Tasks](tasks.md)
+- [Agent Notes](AGENTS.md)
+- [Claude Notes](CLAUDE.md)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Current Product Surface
 
-Changes made via Lovable will be committed automatically to this repo.
+Implemented routes:
 
-**Use your preferred IDE**
+| Route | Purpose |
+|---|---|
+| `/` | Landing page |
+| `/auth` | Host sign in/sign up |
+| `/dashboard` | Host overview, invite links, status cards |
+| `/settings` | Public profile, handle, city, bio, photo |
+| `/schedule` | Availability slots and screening configuration |
+| `/:handle` | Public profile invite page |
+| `/i/:token` | Token invite page |
+| `/invites` | Host review queue |
+| `/dates` | Accepted dates |
+| `/dates/:dateId` | Date detail |
+| `/dates/:dateId/safety` | Safety Pack |
+| `/demo/invite` | Static invite demo |
+| `/demo/safety-pack` | Static Safety Pack demo |
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Local Development
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Use npm. The stale Bun lockfile was removed because it caused Cloudflare Pages to choose Bun during dependency installation.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm ci
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Useful commands:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+npm run build
+npm run preview
+npm run lint
+```
 
-**Use GitHub Codespaces**
+`npm run build` is the deployment gate used by Cloudflare Pages.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Environment
 
-## What technologies are used for this project?
+Frontend variables use Vite's `VITE_` prefix and are embedded into the browser bundle at build time:
 
-This project is built with:
+```sh
+VITE_SUPABASE_URL=
+VITE_SUPABASE_PUBLISHABLE_KEY=
+VITE_SUPABASE_PROJECT_ID=
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+These publishable values are visible to browser users by design. Database security must come from Supabase Row Level Security policies. Never expose Supabase secret/service-role keys, Telegram bot tokens, SMS keys, payment keys, or other server secrets in frontend env vars.
 
-## How can I deploy this project?
+For production, configure these values in Cloudflare Pages project settings. For future Supabase Edge Functions, store secrets with Supabase Function Secrets, not in Cloudflare frontend env vars.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Deployment
 
-## Can I connect a custom domain to my Lovable project?
+Cloudflare Pages settings:
 
-Yes, you can!
+```txt
+Framework preset: Vite
+Install command: npm ci
+Build command: npm run build
+Build output directory: dist
+Root directory: /
+Deploy command: empty
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+SPA fallback routing is provided by [public/_redirects](public/_redirects):
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```txt
+/* /index.html 200
+```
+
+Do not add `wrangler.toml` for the current static Pages deployment unless the Cloudflare project is intentionally moved to a Wrangler-managed setup. In this repo, `wrangler.toml` previously caused Cloudflare to skip the build command and fail because `dist` had not been generated.
+
+## Regression Checklist
+
+Before calling a deployment healthy, smoke test:
+
+1. Landing page renders and has no module MIME errors.
+2. `/dashboard` redirects signed-out users to `/auth`.
+3. Host can sign up/sign in.
+4. Host can set handle, city, bio, and public profile.
+5. Host can add an availability slot and activate the schedule.
+6. Host can enable at least one screening question.
+7. Visitor can open `/:handle`, choose a slot, answer screening, and submit.
+8. Host sees the pending invite.
+9. Host accepts the invite and a Date is created.
+10. Date detail shows invitee contact and screening answers.
+11. Safety Pack draft opens and can be activated.
+
+Known implementation work is tracked in [tasks.md](tasks.md).

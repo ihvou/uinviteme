@@ -1,0 +1,197 @@
+# Architecture
+
+This document describes the current hosted architecture, important security boundaries, and the recommended backend direction. It is linked from the [README](../README.md), [User Journey Scenarios](user-journeys.md), [Agent Notes](../AGENTS.md), [Claude Notes](../CLAUDE.md), and [Production MVP Tasks](../tasks.md).
+
+## System Context
+
+```mermaid
+flowchart LR
+  host["Host user"] --> browser["Browser"]
+  visitor["Visitor / invitee"] --> browser
+  trusted["Trusted contact"] -. future emergency SMS .-> smscontact["SMS"]
+
+  browser --> pages["Cloudflare Pages<br/>static Vite React app"]
+  pages --> supabase["Supabase project"]
+
+  supabase --> auth["Supabase Auth"]
+  supabase --> db["Postgres + RLS"]
+  supabase --> storage["Storage<br/>avatars"]
+  supabase -. future .-> functions["Edge Functions"]
+
+  functions -. future .-> botapi["Telegram Bot API"]
+  functions -. future .-> sms["SMS provider"]
+```
+
+## Runtime Components
+
+| Component | Current role | Notes |
+|---|---|---|
+| Cloudflare Pages | Hosts the static Vite build from `dist` | Git-connected deploy from GitHub. No custom deploy command. |
+| React app | Runs UI, routing, Supabase client calls, and most current product behavior | Current app talks directly to Supabase from the browser. |
+| Supabase Auth | Host signup/signin and browser session persistence | Current auth is email/password. |
+| Supabase Postgres | Profiles, schedules, slots, screening config, invitees, invites, dates, safety packs, catalogs | RLS is the primary security boundary. |
+| Supabase Storage | Profile avatar uploads | Uses the `avatars` bucket from the browser. |
+| Supabase Edge Functions | Not implemented yet | Recommended for trusted server-side workflows. |
+| Telegram Bot | Not implemented yet | Feasible via Supabase Edge Functions as a webhook receiver. |
+
+## Current Data Flow
+
+```mermaid
+sequenceDiagram
+  participant H as Host
+  participant V as Visitor
+  participant UI as React app
+  participant SB as Supabase
+
+  H->>UI: Sign up/sign in
+  UI->>SB: Supabase Auth
+  H->>UI: Configure profile, schedule, screening
+  UI->>SB: Browser writes profile/schedule/config
+  V->>UI: Open /:handle
+  UI->>SB: Browser reads public profile/schedule/config
+  V->>UI: Submit invite request
+  UI->>SB: Browser inserts invitee + invite
+  H->>UI: Review pending invite
+  UI->>SB: Browser reads pending invites
+  H->>UI: Accept invite
+  UI->>SB: Browser updates invite + inserts date
+  H->>UI: Activate Safety Pack
+  UI->>SB: Browser updates safety pack status
+```
+
+This works for the current hosted MVP, but several sensitive transitions should move server-side before public launch. See [tasks.md](../tasks.md).
+
+## Security Boundary
+
+The Supabase publishable key is intentionally visible in the browser. It is not a secret. Security depends on:
+
+- Row Level Security on every table.
+- Narrow anonymous policies for public profile and invite submission.
+- Authenticated policies for host-owned data.
+- Future Edge Functions for trusted operations that need service-role access.
+
+Never expose these in the frontend bundle:
+
+- Supabase secret/service-role keys
+- Telegram bot token
+- SMS provider keys
+- Payment provider keys
+- CAPTCHA/Turnstile secret keys
+
+## Backend Direction
+
+Move these workflows out of the browser and into Supabase Edge Functions or Postgres RPCs:
+
+| Workflow | Recommended backend |
+|---|---|
+| Public invite submission | `submit-invite` Edge Function |
+| Invite acceptance | `accept-invite` Edge Function or transactional RPC |
+| Safety Pack activation | `activate-safety-pack` Edge Function |
+| Safety acknowledgements | public `ack-safety-pack` Edge Function |
+| Notifications | shared server-side messaging module |
+| Telegram bot | `telegram-webhook` Edge Function |
+
+The browser should keep presentation, user interaction, and auth session handling. Trusted validation, idempotency, external API calls, and use of server secrets should live server-side.
+
+## Telegram Bot Feasibility
+
+Yes, a Telegram bot can be implemented inside this Supabase project.
+
+Supabase Edge Functions are TypeScript/Deno HTTP functions intended for webhooks and third-party integrations. Supabase also has an official Telegram Bot Edge Function example using grammY. Telegram's Bot API supports HTTPS webhooks, and `setWebhook` supports a `secret_token` that Telegram sends back in the `X-Telegram-Bot-Api-Secret-Token` header.
+
+Recommended shape:
+
+```mermaid
+sequenceDiagram
+  participant T as Telegram
+  participant F as Supabase Edge Function<br/>telegram-webhook
+  participant DB as Supabase Postgres
+  participant API as Telegram Bot API
+
+  T->>F: POST update + secret header
+  F->>F: Verify secret header
+  F->>DB: Find telegram chat/user mapping
+  F->>DB: Read/write invite/date/safety state
+  F->>API: sendMessage/editMessage/reply markup
+```
+
+Possible bot features:
+
+- `/start` and account linking for hosts.
+- Notify host when a new invite arrives.
+- Show pending invite summary.
+- Accept or decline with inline buttons.
+- Send date reminders.
+- Safety Pack check-in buttons.
+- Visitor accepted-invite notifications after the visitor opts into Telegram.
+- Discovery browsing one public active profile at a time.
+
+The bot is not required for the first web invite submission. Visitor Telegram linking happens after invite submission or when the visitor chooses to browse nearby profiles.
+
+Important constraints:
+
+- Store `TELEGRAM_BOT_TOKEN` and webhook secret in Supabase Function Secrets.
+- Validate `X-Telegram-Bot-Api-Secret-Token` on every webhook request.
+- Make handlers idempotent by Telegram `update_id` or callback payload.
+- Keep responses quick; queue or log long-running work.
+- Treat Telegram chat IDs as sensitive personal data.
+- Telegram complements SMS: Telegram is for host/visitor app notifications and check-ins; trusted-contact escalation is SMS-only for now.
+
+## Planned Notification And Telegram Rules
+
+These rules describe the next implementation phase. See [User Journey Scenarios](user-journeys.md#to-be-implemented-scenarios).
+
+| Area | Rule |
+|---|---|
+| Web invite submission | Visitor submits in the web app and must verify phone by SMS before `submit-invite` succeeds. |
+| Telegram opt-in | Visitor is prompted to enable Telegram notifications after successful invite submission. Telegram is optional for the invite itself. |
+| Duplicate prevention | Enforce one active pending invite per verified phone per host. |
+| Host admin | Linked hosts receive new-invite notifications and can accept/reject in Telegram. |
+| Visitor accepted notification | Only visitors who opted into Telegram get accepted-invite notifications through the bot. |
+| Host contact sharing | Host chooses accepted-contact method, initially `telegram` or `instagram`. Host phone is not shared by default. |
+| Invite page visibility | `public_profile_enabled = false` hides the public profile entirely. |
+| Discovery visibility | Add `discovery_enabled`, default true. Discovery only includes public, active, discovery-enabled profiles. |
+| Safety check-in | Host receives Telegram check-in reminders. Trusted contact receives SMS only for emergency or missed check-in. |
+| Discovery location | Start from the first viewed/invited host city, then use Telegram native location or manually sent city if provided. |
+
+Planned backend surface:
+
+| Function | Purpose |
+|---|---|
+| `telegram-webhook` | Receive Telegram updates, link accounts, process callback buttons, drive bot menus. |
+| `send-phone-otp` | Send SMS OTP to visitor phone numbers. |
+| `verify-phone-otp` | Verify OTP and issue a short-lived phone verification reference. |
+| `submit-invite` | Validate public invite payload, phone verification, duplicate rule, screening, and create invite server-side. |
+| `accept-invite` | Transactionally accept invite, create date and Safety Pack draft, enqueue notifications. |
+| `decline-invite` | Transactionally decline invite and notify visitor when applicable. |
+| `set-profile-visibility` | Let web/bot enable or disable public profile and discovery visibility. |
+| `safety-checkin-reminder` | Scheduled reminder and missed-check-in processor. |
+| `safety-alert` | Send trusted-contact SMS for emergency or missed check-in. |
+
+Planned data changes:
+
+| Data area | Purpose |
+|---|---|
+| `telegram_accounts` | Link Telegram chat/user IDs to app users or invitees. |
+| `phone_verifications` | Store OTP challenges, verification status, expiry, and provider metadata. |
+| `notification_outbox` / `notification_deliveries` | Queue and audit Telegram/SMS notifications. |
+| `trusted_contacts` | Store trusted-contact phone numbers for emergency alerts. |
+| `profiles.discovery_enabled` | Control discovery separately from public profile visibility. |
+| `profiles.instagram_handle` | Host Instagram contact for accepted-invite sharing. |
+| `profiles.accepted_contact_channel` | Host preference for sharing Telegram or Instagram after acceptance. |
+| `discovery_events` | Record viewed/skipped/invited profile events for browsing. |
+
+References:
+
+- Supabase Edge Functions overview: <https://supabase.com/docs/guides/functions>
+- Supabase Function secrets: <https://supabase.com/docs/guides/functions/secrets>
+- Supabase Telegram Bot example: <https://supabase.com/docs/guides/functions/examples/telegram-bot>
+- Telegram Bot API webhooks: <https://core.telegram.org/bots/api#setwebhook>
+
+## Related Docs
+
+- [User Journey Scenarios](user-journeys.md)
+- [Production MVP Tasks](../tasks.md)
+- [README](../README.md)
+- [Agent Notes](../AGENTS.md)
+- [Claude Notes](../CLAUDE.md)
