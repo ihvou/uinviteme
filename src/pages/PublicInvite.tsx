@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Heart, Calendar, MapPin, Lock, AlertCircle, Coffee, Wine, UtensilsCrossed, Sparkles } from 'lucide-react';
 import { usePublicInvite, SlotWithDate } from '@/hooks/usePublicInvite';
-import { InviteWizard } from '@/components/invite/InviteWizard';
+import { InviteSubmitSuccess, InviteWizard } from '@/components/invite/InviteWizard';
 import { InviteSubmittedCard } from '@/components/invite/InviteSubmittedCard';
 
 const formatIcons: Record<string, typeof Coffee> = {
@@ -34,7 +34,7 @@ export default function PublicInvite() {
   } = usePublicInvite(token);
 
   const [selectedSlot, setSelectedSlot] = useState<SlotWithDate | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [submittedInvite, setSubmittedInvite] = useState<InviteSubmitSuccess | null>(null);
 
   const timeBucketLabels: Record<string, string> = {
     morning: 'Morning (9 AM - 12 PM)',
@@ -97,7 +97,7 @@ export default function PublicInvite() {
     );
   }
 
-  if (submitted) {
+  if (submittedInvite) {
     return (
       <div className="min-h-screen bg-gradient-subtle">
         <nav className="bg-background/80 backdrop-blur-md border-b border-border">
@@ -113,6 +113,7 @@ export default function PublicInvite() {
             hostName={profile?.display_name}
             hostHandle={profile?.handle}
             hostCity={profile?.city_label}
+            inviteId={submittedInvite.inviteId}
           />
         </div>
       </div>
@@ -141,7 +142,7 @@ export default function PublicInvite() {
             boundaryTags={boundaryTags}
             onSubmit={submitInvite}
             onCancel={() => setSelectedSlot(null)}
-            onSuccess={() => setSubmitted(true)}
+            onSuccess={(result) => setSubmittedInvite(result || { success: true })}
           />
         </div>
       </div>

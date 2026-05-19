@@ -11,6 +11,12 @@ import { ArrowLeft, ArrowRight, Check, Lock, User, MessageSquare, Send } from 'l
 import { SlotWithDate, ScreeningConfig, CatalogQuestion, CatalogFormat, CatalogVibeTag, CatalogIntentTag, CatalogBoundaryTag } from '@/hooks/usePublicInvite';
 import { useToast } from '@/hooks/use-toast';
 
+export interface InviteSubmitSuccess {
+  inviteId?: string;
+  inviteeId?: string;
+  success?: boolean;
+}
+
 interface InviteWizardProps {
   slot: SlotWithDate;
   screeningConfig: ScreeningConfig | null;
@@ -31,9 +37,9 @@ interface InviteWizardProps {
     };
     answers: Record<string, unknown>;
     inviteeNote?: string;
-  }) => Promise<{ error?: string; data?: unknown }>;
+  }) => Promise<{ error?: string; data?: InviteSubmitSuccess }>;
   onCancel: () => void;
-  onSuccess: () => void;
+  onSuccess: (data?: InviteSubmitSuccess) => void;
 }
 
 type Step = 'info' | 'questions' | 'note' | 'review';
@@ -163,7 +169,7 @@ export function InviteWizard({
     if (result.error) {
       toast({ title: 'Failed to submit', description: result.error, variant: 'destructive' });
     } else {
-      onSuccess();
+      onSuccess(result.data);
     }
   };
 

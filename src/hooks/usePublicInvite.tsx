@@ -180,7 +180,9 @@ export function usePublicInvite(token: string | undefined) {
       if (inviteeError) throw inviteeError;
 
       // Create invite record
+      const inviteId = crypto.randomUUID();
       const inviteData = {
+        id: inviteId,
         schedule_id: inviteLink.schedule_id,
         slot_id: data.slotId,
         invite_link_id: inviteLink.id,
@@ -197,7 +199,7 @@ export function usePublicInvite(token: string | undefined) {
 
       if (inviteError) throw inviteError;
 
-      return { data: { success: true } };
+      return { data: { success: true, inviteId, inviteeId } };
     } catch (err) {
       return { error: err instanceof Error ? err.message : 'Failed to submit invite' };
     }

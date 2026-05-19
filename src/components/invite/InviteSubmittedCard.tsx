@@ -8,6 +8,7 @@ interface InviteSubmittedCardProps {
   hostName?: string | null;
   hostHandle?: string | null;
   hostCity?: string | null;
+  inviteId?: string | null;
 }
 
 function buildStartPayload(action: 'invite_updates' | 'discover', hostHandle?: string | null) {
@@ -16,9 +17,9 @@ function buildStartPayload(action: 'invite_updates' | 'discover', hostHandle?: s
   return normalizedHandle ? `${action}_${normalizedHandle}` : action;
 }
 
-export function InviteSubmittedCard({ hostName, hostHandle, hostCity }: InviteSubmittedCardProps) {
+export function InviteSubmittedCard({ hostName, hostHandle, hostCity, inviteId }: InviteSubmittedCardProps) {
   const displayName = hostName || 'the host';
-  const updatesUrl = getTelegramStartUrl(buildStartPayload('invite_updates', hostHandle));
+  const updatesUrl = getTelegramStartUrl(buildStartPayload('invite_updates', inviteId || hostHandle));
   const discoveryUrl = getTelegramStartUrl(buildStartPayload('discover', hostHandle));
 
   const renderTelegramButton = (
