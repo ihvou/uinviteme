@@ -38,7 +38,7 @@ const LINK_DESCRIPTIONS: Record<LinkType, string> = {
 export function InviteLinkCard({ 
   scheduleId, 
   handle, 
-  publicProfileEnabled = false, 
+  publicProfileEnabled = true,
   onTogglePublicProfile 
 }: InviteLinkCardProps) {
   const { links, loading, refreshLink, getInviteUrl, getPublicProfileUrl } = useInviteLinks(scheduleId);

@@ -151,7 +151,7 @@ export function useInviteLinks(scheduleId: string | null) {
 
   const getPublicProfileUrl = (handle: string | null | undefined) => {
     if (!handle) return null;
-    return `${window.location.origin}/invite/${handle}`;
+    return `${window.location.origin}/${handle}`;
   };
 
   return {

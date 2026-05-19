@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Heart, ArrowLeft, User, Bell, Loader2, Globe } from 'lucide-react';
+import { Heart, ArrowLeft, User, Bell, Loader2, Globe, Compass, Instagram } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +15,7 @@ import { PhotoUpload } from '@/components/settings/PhotoUpload';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Profile = Tables<'profiles'>;
+type AcceptedContactChannel = 'telegram' | 'instagram';
 
 export default function Settings() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -27,7 +29,10 @@ export default function Settings() {
   const [handle, setHandle] = useState('');
   const [bioOneLiner, setBioOneLiner] = useState('');
   const [cityLabel, setCityLabel] = useState('');
-  const [publicProfileEnabled, setPublicProfileEnabled] = useState(false);
+  const [publicProfileEnabled, setPublicProfileEnabled] = useState(true);
+  const [discoveryEnabled, setDiscoveryEnabled] = useState(true);
+  const [instagramHandle, setInstagramHandle] = useState('');
+  const [acceptedContactChannel, setAcceptedContactChannel] = useState<AcceptedContactChannel>('telegram');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,7 +62,12 @@ export default function Settings() {
       setHandle(data.handle || '');
       setBioOneLiner(data.bio_one_liner || '');
       setCityLabel(data.city_label || '');
-      setPublicProfileEnabled(data.public_profile_enabled || false);
+      setPublicProfileEnabled(data.public_profile_enabled ?? true);
+      setDiscoveryEnabled(data.discovery_enabled ?? true);
+      setInstagramHandle(data.instagram_handle || '');
+      setAcceptedContactChannel(
+        data.accepted_contact_channel === 'instagram' ? 'instagram' : 'telegram'
+      );
       setPhotoUrl(data.photo_url || null);
     }
     setLoading(false);
@@ -66,6 +76,17 @@ export default function Settings() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
+    const normalizedInstagramHandle = instagramHandle.trim().replace(/^@+/, '');
+
+    if (acceptedContactChannel === 'instagram' && !normalizedInstagramHandle) {
+      toast({
+        variant: 'destructive',
+        title: 'Instagram required',
+        description: 'Add an Instagram handle before sharing Instagram after acceptance.',
+      });
+      setSaving(false);
+      return;
+    }
 
     const { error } = await supabase
       .from('profiles')
@@ -75,6 +96,9 @@ export default function Settings() {
         bio_one_liner: bioOneLiner,
         city_label: cityLabel,
         public_profile_enabled: publicProfileEnabled,
+        discovery_enabled: discoveryEnabled,
+        instagram_handle: normalizedInstagramHandle || null,
+        accepted_contact_channel: acceptedContactChannel,
       })
       .eq('id', user.id);
 
@@ -161,7 +185,7 @@ export default function Settings() {
               <div className="space-y-2">
                 <Label htmlFor="handle">Handle</Label>
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-sm">uinvite.me/invite/</span>
+                  <span className="text-muted-foreground text-sm">uinvite.me/</span>
                   <Input
                     id="handle"
                     value={handle}
@@ -196,6 +220,19 @@ export default function Settings() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="instagram" className="flex items-center gap-2">
+                  <Instagram className="h-4 w-4" />
+                  Instagram
+                </Label>
+                <Input
+                  id="instagram"
+                  value={instagramHandle}
+                  onChange={(e) => setInstagramHandle(e.target.value)}
+                  placeholder="@yourhandle"
+                />
+              </div>
+
               <div className="flex items-center justify-between pt-2 border-t">
                 <div className="space-y-0.5">
                   <Label htmlFor="publicProfile" className="flex items-center gap-2">
@@ -211,6 +248,42 @@ export default function Settings() {
                   checked={publicProfileEnabled}
                   onCheckedChange={setPublicProfileEnabled}
                 />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="discovery" className="flex items-center gap-2">
+                    <Compass className="h-4 w-4" />
+                    Discovery
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Let your profile appear in nearby browsing when public and active
+                  </p>
+                </div>
+                <Switch
+                  id="discovery"
+                  checked={discoveryEnabled}
+                  onCheckedChange={setDiscoveryEnabled}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="acceptedContact">Accepted Contact</Label>
+                <Select
+                  value={acceptedContactChannel}
+                  onValueChange={(value) => setAcceptedContactChannel(value as AcceptedContactChannel)}
+                >
+                  <SelectTrigger id="acceptedContact">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="telegram">Telegram</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Shared with visitors only after you accept their invite
+                </p>
               </div>
 
               <Button onClick={handleSave} disabled={saving}>

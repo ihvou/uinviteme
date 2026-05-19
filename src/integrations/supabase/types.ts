@@ -571,14 +571,17 @@ export type Database = {
       }
       profiles: {
         Row: {
+          accepted_contact_channel: string | null
           age: number | null
           bio_one_liner: string | null
           city_label: string | null
           country_code: string | null
           created_at: string | null
+          discovery_enabled: boolean | null
           display_name: string | null
           handle: string | null
           id: string
+          instagram_handle: string | null
           locale: string | null
           notify_channel: string | null
           photo_url: string | null
@@ -589,14 +592,17 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          accepted_contact_channel?: string | null
           age?: number | null
           bio_one_liner?: string | null
           city_label?: string | null
           country_code?: string | null
           created_at?: string | null
+          discovery_enabled?: boolean | null
           display_name?: string | null
           handle?: string | null
           id: string
+          instagram_handle?: string | null
           locale?: string | null
           notify_channel?: string | null
           photo_url?: string | null
@@ -607,14 +613,17 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          accepted_contact_channel?: string | null
           age?: number | null
           bio_one_liner?: string | null
           city_label?: string | null
           country_code?: string | null
           created_at?: string | null
+          discovery_enabled?: boolean | null
           display_name?: string | null
           handle?: string | null
           id?: string
+          instagram_handle?: string | null
           locale?: string | null
           notify_channel?: string | null
           photo_url?: string | null

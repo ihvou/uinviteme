@@ -188,7 +188,7 @@ export default function Dashboard() {
           <InviteLinkCard
             scheduleId={schedule?.id || null}
             handle={profile?.handle}
-            publicProfileEnabled={profile?.public_profile_enabled || false}
+            publicProfileEnabled={profile?.public_profile_enabled ?? true}
             onTogglePublicProfile={handleTogglePublicProfile}
           />
         </div>
