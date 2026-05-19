@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Heart, Calendar, MapPin, Lock, AlertCircle, CheckCircle2, Coffee, Wine, UtensilsCrossed, Sparkles } from 'lucide-react';
+import { Heart, Calendar, MapPin, Lock, AlertCircle, Coffee, Wine, UtensilsCrossed, Sparkles } from 'lucide-react';
 import { usePublicInvite, SlotWithDate } from '@/hooks/usePublicInvite';
 import { InviteWizard } from '@/components/invite/InviteWizard';
+import { InviteSubmittedCard } from '@/components/invite/InviteSubmittedCard';
 
 const formatIcons: Record<string, typeof Coffee> = {
   Coffee: Coffee,
@@ -108,26 +109,11 @@ export default function PublicInvite() {
           </div>
         </nav>
         <div className="container mx-auto max-w-2xl px-4 py-16">
-          <Card>
-            <CardContent className="p-8 text-center">
-              <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h1 className="font-display text-2xl font-bold text-foreground mb-2">
-                Request Sent!
-              </h1>
-              <p className="text-muted-foreground mb-6">
-                {profile?.display_name || 'The host'} will review your request and get back to you.
-                You'll receive a notification when they respond.
-              </p>
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Want your own invite page?
-                </p>
-                <Link to="/auth?mode=signup">
-                  <Button>Create Your Invite Page</Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+          <InviteSubmittedCard
+            hostName={profile?.display_name}
+            hostHandle={profile?.handle}
+            hostCity={profile?.city_label}
+          />
         </div>
       </div>
     );

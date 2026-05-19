@@ -64,9 +64,12 @@ Frontend variables use Vite's `VITE_` prefix and are embedded into the browser b
 VITE_SUPABASE_URL=
 VITE_SUPABASE_PUBLISHABLE_KEY=
 VITE_SUPABASE_PROJECT_ID=
+VITE_TELEGRAM_BOT_USERNAME=
 ```
 
 These publishable values are visible to browser users by design. Database security must come from Supabase Row Level Security policies. Never expose Supabase secret/service-role keys, Telegram bot tokens, SMS keys, payment keys, or other server secrets in frontend env vars.
+
+`VITE_TELEGRAM_BOT_USERNAME` is optional. When set, the public invite success screen deep-links visitors into Telegram for accepted-invite notifications and nearby discovery.
 
 For production, configure these values in Cloudflare Pages project settings. For future Supabase Edge Functions, store secrets with Supabase Function Secrets, not in Cloudflare frontend env vars.
 
