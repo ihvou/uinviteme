@@ -94,7 +94,7 @@ These scenarios describe the next notification and Telegram phases. They are fut
 
 ### Scenario 6: Visitor Submits Invite On Web With SMS Verification
 
-Status: To be implemented.
+Status: Partially implemented with mock SMS verification.
 
 Telegram is not required before invite submission. The visitor should be able to complete the web invite flow with SMS-verified phone only.
 
@@ -102,13 +102,15 @@ Telegram is not required before invite submission. The visitor should be able to
 |---:|---|---|---|
 | 1 | Visitor | Opens `/:handle` or `/i/:token`. | App loads the host profile, active schedule, available slot, and screening config. |
 | 2 | Visitor | Chooses a slot and enters contact details. | Web wizard collects name, phone, optional Instagram/email/Telegram username, answers, and note. |
-| 3 | Visitor | Requests SMS verification code. | `send-phone-otp` sends an OTP to UAE, Turkey, or Singapore phone number via the configured SMS provider. |
-| 4 | Visitor | Enters OTP in the web wizard. | `verify-phone-otp` marks the phone challenge verified. |
-| 5 | Visitor | Submits invite. | `submit-invite` validates slot/date/screening/phone verification and creates invitee + invite server-side. |
+| 3 | Visitor | Requests SMS verification code. | Current mock: web wizard shows/sends test code `123456`. Future: `send-phone-otp` sends an OTP to UAE, Turkey, or Singapore phone number via the configured SMS provider. |
+| 4 | Visitor | Enters OTP in the web wizard. | Current mock: correct code marks phone verified locally and stores `invitees.phone_verified = true`. Future: `verify-phone-otp` marks the phone challenge verified server-side. |
+| 5 | Visitor | Submits invite. | Current flow still creates invitee + invite from the browser. Future: `submit-invite` validates slot/date/screening/phone verification and creates invitee + invite server-side. |
 | 6 | System | Checks duplicate rule. | One active pending invite per verified phone per host is enforced. |
 | 7 | System | Shows success screen. | Visitor sees confirmation plus "Enable Telegram notifications to know when your invite is accepted." |
 
 Success condition: a visitor can submit a real invite without Telegram, but cannot submit without verified phone or create duplicate pending invites for the same host.
+
+Current caveat: phone verification is mocked in the web app and must move server-side before public launch.
 
 ### Scenario 7: Visitor Enables Telegram Notifications After Invite
 
@@ -176,8 +178,11 @@ Status: To be implemented.
 | 3 | Visitor | Optionally shares Telegram native location or sends city manually. | Bot updates discovery location and ranking context. |
 | 4 | Bot | Shows one profile at a time. | Only public, active, discovery-enabled profiles are eligible. |
 | 5 | Visitor | Taps Invite or Skip. | Invite opens the web invite flow; Skip records discovery event and shows next profile. |
+| 6 | Visitor | First invites from Telegram discovery before phone validation. | Bot must run phone verification in Telegram before creating the first invite. |
 
 Success condition: visitor can browse public active profiles one by one in Telegram, with invite actions returning to the web flow.
+
+Important rule: discovery can start before phone verification, but the first Telegram-origin invite cannot be created until that visitor verifies a phone number in Telegram.
 
 Discovery eligibility:
 

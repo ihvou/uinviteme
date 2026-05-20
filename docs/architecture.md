@@ -194,6 +194,7 @@ These rules describe the next implementation phase. See [User Journey Scenarios]
 | Area | Rule |
 |---|---|
 | Web invite submission | Visitor submits in the web app and must verify phone by SMS before `submit-invite` succeeds. |
+| Mock phone verification | Current web wizard uses a test code and stores `invitees.phone_verified = true`; provider-backed verification still belongs server-side. |
 | Telegram opt-in | Visitor is prompted to enable Telegram notifications after successful invite submission. Telegram is optional for the invite itself. |
 | Duplicate prevention | Enforce one active pending invite per verified phone per host. |
 | Host admin | Linked hosts receive new-invite notifications and can accept/reject in Telegram. |
@@ -203,6 +204,7 @@ These rules describe the next implementation phase. See [User Journey Scenarios]
 | Discovery visibility | Add `discovery_enabled`, default true. Discovery only includes public, active, discovery-enabled profiles. |
 | Safety check-in | Host receives Telegram check-in reminders. Trusted contact receives SMS only for emergency or missed check-in. |
 | Discovery location | Start from the first viewed/invited host city, then use Telegram native location or manually sent city if provided. |
+| Discovery phone gate | Visitor can browse before phone verification, but the first Telegram-origin invite must verify phone inside Telegram before invite creation. |
 
 Planned backend surface:
 

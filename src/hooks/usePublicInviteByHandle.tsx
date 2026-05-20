@@ -152,6 +152,7 @@ export function usePublicInviteByHandle(handle: string | undefined) {
     inviteeData: {
       name: string;
       phone_e164?: string;
+      phone_verified?: boolean;
       email?: string;
       instagram_handle?: string;
       telegram_username?: string;
@@ -171,6 +172,7 @@ export function usePublicInviteByHandle(handle: string | undefined) {
           id: inviteeId,
           name: data.inviteeData.name,
           phone_e164: data.inviteeData.phone_e164,
+          phone_verified: data.inviteeData.phone_verified ?? false,
           email: data.inviteeData.email,
           instagram_handle: data.inviteeData.instagram_handle,
           telegram_username: data.inviteeData.telegram_username,

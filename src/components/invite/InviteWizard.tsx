@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ArrowLeft, ArrowRight, Check, Lock, User, MessageSquare, Send } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Lock, User, MessageSquare, Send, ShieldCheck } from 'lucide-react';
 import { SlotWithDate, ScreeningConfig, CatalogQuestion, CatalogFormat, CatalogVibeTag, CatalogIntentTag, CatalogBoundaryTag } from '@/hooks/usePublicInvite';
 import { useToast } from '@/hooks/use-toast';
 
@@ -31,6 +31,7 @@ interface InviteWizardProps {
     inviteeData: {
       name: string;
       phone_e164?: string;
+      phone_verified?: boolean;
       email?: string;
       instagram_handle?: string;
       telegram_username?: string;
@@ -43,6 +44,7 @@ interface InviteWizardProps {
 }
 
 type Step = 'info' | 'questions' | 'note' | 'review';
+const MOCK_SMS_CODE = '123456';
 
 export function InviteWizard({
   slot,
@@ -63,6 +65,10 @@ export function InviteWizard({
   // Invitee info
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneVerificationSent, setPhoneVerificationSent] = useState(false);
+  const [phoneCode, setPhoneCode] = useState('');
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [verifiedPhone, setVerifiedPhone] = useState('');
   const [email, setEmail] = useState('');
   const [instagram, setInstagram] = useState('');
   const [telegram, setTelegram] = useState('');
@@ -80,6 +86,9 @@ export function InviteWizard({
   const intentLabel = intentTags.find(t => t.id === slot.intent_tag)?.label || '';
   const vibeLabels = vibeTags.filter(t => slot.vibe_tags?.includes(t.id)).map(t => t.label);
   const boundaryLabels = boundaryTags.filter(t => slot.boundary_tags?.includes(t.id)).map(t => t.label);
+  const trimmedPhone = phone.trim();
+  const phoneNeedsVerification = Boolean(screeningConfig?.require_phone && trimmedPhone);
+  const isPhoneVerified = phoneVerified && verifiedPhone === trimmedPhone;
 
   const timeBucketLabels: Record<string, string> = {
     morning: 'Morning (9 AM - 12 PM)',
@@ -95,6 +104,10 @@ export function InviteWizard({
     }
     if (screeningConfig?.require_phone && !phone.trim()) {
       toast({ title: 'Phone number is required', variant: 'destructive' });
+      return false;
+    }
+    if (phoneNeedsVerification && !isPhoneVerified) {
+      toast({ title: 'Verify your phone number first', variant: 'destructive' });
       return false;
     }
     if (screeningConfig?.require_instagram && !instagram.trim()) {
@@ -157,6 +170,7 @@ export function InviteWizard({
       inviteeData: {
         name: name.trim(),
         phone_e164: phone.trim() || undefined,
+        phone_verified: isPhoneVerified,
         email: email.trim() || undefined,
         instagram_handle: instagram.trim() || undefined,
         telegram_username: telegram.trim() || undefined,
@@ -175,6 +189,41 @@ export function InviteWizard({
 
   const updateAnswer = (questionId: string, value: unknown) => {
     setAnswers(prev => ({ ...prev, [questionId]: value }));
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setPhone(value);
+    setPhoneCode('');
+    setPhoneVerificationSent(false);
+    setPhoneVerified(false);
+    setVerifiedPhone('');
+  };
+
+  const handleSendPhoneCode = () => {
+    if (!trimmedPhone) {
+      toast({ title: 'Enter your phone number first', variant: 'destructive' });
+      return;
+    }
+
+    setPhoneVerificationSent(true);
+    setPhoneCode('');
+    setPhoneVerified(false);
+    setVerifiedPhone('');
+    toast({
+      title: 'Verification code sent',
+      description: `Test code: ${MOCK_SMS_CODE}`,
+    });
+  };
+
+  const handleVerifyPhoneCode = () => {
+    if (phoneCode.trim() !== MOCK_SMS_CODE) {
+      toast({ title: 'Invalid verification code', variant: 'destructive' });
+      return;
+    }
+
+    setPhoneVerified(true);
+    setVerifiedPhone(trimmedPhone);
+    toast({ title: 'Phone verified' });
   };
 
   const renderQuestionInput = (question: CatalogQuestion) => {
@@ -317,9 +366,51 @@ export function InviteWizard({
                   id="phone"
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
                   placeholder="+1 (555) 000-0000"
                 />
+                <div className="rounded-md border border-border bg-muted/30 p-3 space-y-3">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      type="button"
+                      variant={phoneVerificationSent ? 'outline' : 'secondary'}
+                      onClick={handleSendPhoneCode}
+                      disabled={!trimmedPhone || isPhoneVerified}
+                    >
+                      {phoneVerificationSent ? 'Resend code' : 'Send code'}
+                    </Button>
+                    <div className="flex flex-1 gap-2">
+                      <Input
+                        value={phoneCode}
+                        onChange={(e) => setPhoneCode(e.target.value)}
+                        placeholder="6-digit code"
+                        inputMode="numeric"
+                        disabled={!phoneVerificationSent || isPhoneVerified}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleVerifyPhoneCode}
+                        disabled={!phoneVerificationSent || isPhoneVerified}
+                      >
+                        Verify
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    {isPhoneVerified ? (
+                      <>
+                        <ShieldCheck className="h-3 w-3 text-primary" />
+                        <span>Phone verified</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-3 w-3" />
+                        <span>Test SMS code: {MOCK_SMS_CODE}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -427,7 +518,7 @@ export function InviteWizard({
             {phone && (
               <div>
                 <p className="text-sm text-muted-foreground">Phone</p>
-                <p className="font-medium">{phone}</p>
+                <p className="font-medium">{phone} {isPhoneVerified && '· verified'}</p>
               </div>
             )}
             {email && (
