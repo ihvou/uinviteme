@@ -94,7 +94,7 @@ Useful commands:
 ```sh
 deno test supabase/functions/telegram-webhook/handler.test.ts
 supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... PUBLIC_SITE_URL=https://uinvite.me
-supabase functions deploy telegram-webhook
+supabase functions deploy telegram-webhook --no-verify-jwt
 ```
 
 After deploy, configure BotFather/Telegram `setWebhook` to point at:
