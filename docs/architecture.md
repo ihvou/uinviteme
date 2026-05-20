@@ -31,8 +31,8 @@ flowchart LR
 | Supabase Auth | Host signup/signin and browser session persistence | Current auth is email/password. |
 | Supabase Postgres | Profiles, schedules, slots, screening config, invitees, invites, dates, safety packs, catalogs | RLS is the primary security boundary. |
 | Supabase Storage | Profile avatar uploads | Uses the `avatars` bucket from the browser. |
-| Supabase Edge Functions | `telegram-webhook` is committed for visitor Telegram opt-in; other trusted workflows are still pending | Recommended for trusted server-side workflows. |
-| Telegram Bot | Visitor invite-update linking is implemented in the webhook; host admin, discovery menus, and accepted notifications are pending | Uses Telegram webhook secret validation and Supabase Function Secrets. |
+| Supabase Edge Functions | `telegram-webhook` is committed for visitor Telegram opt-in; `accept-invite` is committed for authenticated host decisions | Recommended for trusted server-side workflows. |
+| Telegram Bot | Visitor invite-update linking and accepted-invite notifications are implemented; host admin and discovery menus are pending | Uses Telegram webhook secret validation and Supabase Function Secrets. |
 
 ## Current Data Flow
 
@@ -81,7 +81,29 @@ sequenceDiagram
   F->>T: Send confirmation message
 ```
 
-This is the first backend-owned Telegram slice. It does not yet send accepted-invite notifications; that belongs with the future `accept-invite` workflow.
+This is the first backend-owned Telegram slice. Accepted-invite notification is handled by `accept-invite`.
+
+## Current Acceptance Flow
+
+```mermaid
+sequenceDiagram
+  participant H as Host
+  participant UI as React app
+  participant F as Supabase Edge Function<br/>accept-invite
+  participant DB as Supabase Postgres
+  participant T as Telegram
+
+  H->>UI: Click Accept or Decline
+  UI->>F: POST inviteId + decision with host JWT
+  F->>DB: Verify host owns schedule
+  F->>DB: Update invite decision
+  F->>DB: Create/find date if accepted
+  F->>DB: Find visitor Telegram connection
+  F->>T: Send accepted-invite message if linked
+  F->>DB: Log notification delivery
+```
+
+This improves the current web flow, but full transactional idempotency still needs a Postgres RPC or database-level uniqueness around accepted invite dates.
 
 ## Security Boundary
 
@@ -107,7 +129,7 @@ Move these workflows out of the browser and into Supabase Edge Functions or Post
 | Workflow | Recommended backend |
 |---|---|
 | Public invite submission | `submit-invite` Edge Function |
-| Invite acceptance | `accept-invite` Edge Function or transactional RPC |
+| Invite acceptance | `accept-invite` Edge Function now, transactional RPC later |
 | Safety Pack activation | `activate-safety-pack` Edge Function |
 | Safety acknowledgements | public `ack-safety-pack` Edge Function |
 | Notifications | shared server-side messaging module |
@@ -137,10 +159,11 @@ sequenceDiagram
   F->>API: sendMessage/editMessage/reply markup
 ```
 
-Implemented first:
+Implemented:
 
 - `/start invite_updates_<invite>` links a visitor Telegram chat to the invitee for that submitted invite.
 - `/start discover_<handle>` replies with a placeholder and link back to the public invite page.
+- `accept-invite` sends the visitor a Telegram message when the host accepts and the visitor linked Telegram.
 
 Next bot features:
 

@@ -48,13 +48,13 @@ Current caveat: submission is still direct browser writes to Supabase. Before pu
 |---:|---|---|---|
 | 1 | Host | Opens `/invites`. | App loads pending invites owned by the host schedule. |
 | 2 | Host | Reviews visitor identity, contact, slot, and note. | Host decides whether to accept or decline. |
-| 3 | Host | Clicks Accept. | App marks invite accepted and inserts a date. |
+| 3 | Host | Clicks Accept. | `accept-invite` marks invite accepted, creates or finds the date, and notifies linked visitor in Telegram. |
 | 4 | System | Removes invite from pending queue. | Date appears under `/dates`. |
 | 5 | Host | Opens date detail. | Date detail shows invitee contact, screening responses, slot info, and editable date fields. |
 
 Success condition: exactly one accepted invite creates exactly one date.
 
-Current caveat: acceptance is client-side and non-transactional. It should move to `accept-invite` or a transactional RPC for idempotency.
+Current caveat: acceptance is now server-side through `accept-invite`, but stronger idempotency still needs a transactional RPC or database uniqueness for dates by invite.
 
 ## Scenario 4: Host Activates Safety Pack
 
@@ -116,10 +116,10 @@ Status: To be implemented.
 |---:|---|---|---|
 | 1 | Visitor | Clicks "Enable Telegram notifications" after invite submission. | App opens a Telegram deep link with an invite-specific start payload. |
 | 2 | Visitor | Starts the bot. | `telegram-webhook` validates Telegram's secret header and links the Telegram chat to the invite/invitee. |
-| 3 | System | Host later accepts invite. | `accept-invite` creates the date and queues accepted-invite notification. |
-| 4 | Bot | Sends accepted notification to visitor. | Visitor receives host-approved contact details through Telegram. |
+| 3 | System | Host later accepts invite. | `accept-invite` creates/finds the date and sends accepted-invite notification when Telegram is linked. |
+| 4 | Bot | Sends accepted notification to visitor. | Visitor receives acceptance message with host-approved contact channel. |
 
-Current implementation covers steps 1-2. Success condition for the full scenario: visitor receives accepted-invite notification in Telegram only after opting in.
+Current implementation covers steps 1-4 for web-host acceptance. Success condition for the full scenario: visitor receives accepted-invite notification in Telegram only after opting in.
 
 ### Scenario 8: Host Administers Invites In Telegram
 

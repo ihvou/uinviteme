@@ -25,6 +25,7 @@ export default function Invites() {
   const navigate = useNavigate();
   const [invites, setInvites] = useState<InviteWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const [decidingInviteId, setDecidingInviteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -74,16 +75,11 @@ export default function Invites() {
   };
 
   const handleDecision = async (inviteId: string, decision: 'accepted' | 'declined') => {
-    const invite = invites.find(i => i.id === inviteId);
-    if (!invite) return;
+    setDecidingInviteId(inviteId);
 
-    const { error } = await supabase
-      .from('invites')
-      .update({ 
-        status: decision, 
-        decided_at: new Date().toISOString() 
-      })
-      .eq('id', inviteId);
+    const { data, error } = await supabase.functions.invoke('accept-invite', {
+      body: { inviteId, decision },
+    });
 
     if (error) {
       toast({
@@ -91,49 +87,21 @@ export default function Invites() {
         title: 'Error',
         description: 'Failed to update invite status',
       });
+      setDecidingInviteId(null);
       return;
     }
 
-    // If accepted, create a date record
-    if (decision === 'accepted' && user) {
-      const { error: dateError } = await supabase
-        .from('dates')
-        .insert({
-          user_id: user.id,
-          invite_id: inviteId,
-          date: invite.target_date,
-          time_bucket: invite.slot.time_bucket,
-          area_label: invite.slot.area_label,
-          area_place_id: invite.slot.area_place_id,
-          format: invite.slot.format,
-          intent_tag: invite.slot.intent_tag,
-          vibe_tags: invite.slot.vibe_tags,
-          boundary_tags: invite.slot.boundary_tags,
-          invitee_snapshot: {
-            name: invite.invitee.name,
-            phone_e164: invite.invitee.phone_e164,
-            instagram_handle: invite.invitee.instagram_handle,
-            telegram_username: invite.invitee.telegram_username,
-            email: invite.invitee.email,
-          },
-          status: 'upcoming',
-        });
-
-      if (dateError) {
-        console.error('Error creating date:', dateError);
-        toast({
-          variant: 'destructive',
-          title: 'Warning',
-          description: 'Invite accepted but failed to create date record',
-        });
-      }
-    }
-
+    const notification = data?.notification;
     toast({
       title: decision === 'accepted' ? 'Invite accepted!' : 'Invite declined',
-      description: decision === 'accepted' ? "Date has been scheduled" : 'The invite has been removed',
+      description: decision === 'accepted'
+        ? notification?.sent
+          ? 'Date has been scheduled and the visitor was notified in Telegram'
+          : 'Date has been scheduled'
+        : 'The invite has been removed',
     });
-    fetchInvites();
+    await fetchInvites();
+    setDecidingInviteId(null);
   };
 
   const timeBucketLabels: Record<string, string> = {
@@ -243,14 +211,20 @@ export default function Invites() {
                     <Button 
                       className="flex-1 gap-2"
                       onClick={() => handleDecision(invite.id, 'accepted')}
+                      disabled={decidingInviteId === invite.id}
                     >
-                      <Check className="h-4 w-4" />
+                      {decidingInviteId === invite.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
                       Accept
                     </Button>
                     <Button 
                       variant="outline" 
                       className="flex-1 gap-2"
                       onClick={() => handleDecision(invite.id, 'declined')}
+                      disabled={decidingInviteId === invite.id}
                     >
                       <X className="h-4 w-4" />
                       Decline

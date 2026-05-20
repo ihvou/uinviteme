@@ -88,13 +88,16 @@ Committed functions:
 | Function | Purpose | Status |
 |---|---|---|
 | `telegram-webhook` | Receives Telegram bot updates, verifies Telegram's webhook secret header, and links `/start invite_updates_<invite>` chats to invitees. | Local code and tests are in repo; deploy when bot secrets are ready. |
+| `accept-invite` | Authenticated host endpoint that accepts/declines invites, creates the date on accept, and notifies a Telegram-linked visitor. | Local code and tests are in repo; deploy with default JWT verification. |
 
 Useful commands:
 
 ```sh
 deno test supabase/functions/telegram-webhook/handler.test.ts
+deno test supabase/functions/accept-invite/handler.test.ts
 supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... PUBLIC_SITE_URL=https://uinvite.me
 supabase functions deploy telegram-webhook --no-verify-jwt
+supabase functions deploy accept-invite
 ```
 
 After deploy, configure BotFather/Telegram `setWebhook` to point at:
