@@ -2,6 +2,7 @@ const TELEGRAM_SECRET_HEADER = "x-telegram-bot-api-secret-token";
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const COMPACT_UUID_REGEX = /^[0-9a-f]{32}$/;
+const BROWSE_PROFILES_LABEL = "Browse profiles nearby";
 
 type Fetcher = typeof fetch;
 
@@ -29,11 +30,21 @@ interface TelegramUpdate {
 interface InviteRecord {
   id: string;
   invitee_id: string;
+  schedule_id: string;
   status: "pending" | "accepted" | "declined";
 }
 
 interface TelegramConnectionRecord {
   id: string;
+  invitee_id?: string;
+}
+
+interface ScheduleRecord {
+  user_id: string;
+}
+
+interface ProfileRecord {
+  handle: string | null;
 }
 
 export type StartCommand =
@@ -132,6 +143,23 @@ export async function handleTelegramUpdate(
     return { ok: true, ignored: true };
   }
 
+  if (text.trim().toLowerCase() === BROWSE_PROFILES_LABEL.toLowerCase()) {
+    const handle = await getLatestBrowseHandleForChat(env, fetcher, chatId);
+
+    if (!handle) {
+      await sendTelegramMessage(
+        env,
+        fetcher,
+        chatId,
+        "Nearby browsing is coming next. Please use the View profiles nearby link from the invite confirmation page.",
+      );
+      return { ok: true, action: "discover_context_missing" };
+    }
+
+    await sendDiscoveryPlaceholder(env, fetcher, chatId, handle);
+    return { ok: true, action: "discover_placeholder", handle };
+  }
+
   const command = parseStartCommand(text);
 
   if (!command) {
@@ -158,11 +186,18 @@ export async function handleTelegramUpdate(
       username: normalizeTelegramUsername(message.from?.username),
     });
 
+    const handle = await getHostHandleForSchedule(
+      env,
+      fetcher,
+      invite.schedule_id,
+    );
+
     await sendTelegramMessage(
       env,
       fetcher,
       chatId,
-      "Telegram notifications are enabled for this invite. I'll message you here if the host accepts.",
+      "Telegram notifications are enabled for this invite. I'll message you here if the host accepts.\n\nYou can also browse profiles nearby when you're ready.",
+      handle ? browseProfilesKeyboard() : removeKeyboard(),
     );
 
     return {
@@ -174,15 +209,7 @@ export async function handleTelegramUpdate(
   }
 
   if (command.action === "discover") {
-    const profileUrl = `${env.publicSiteUrl.replace(/\/+$/, "")}/${
-      encodeURIComponent(command.handle)
-    }`;
-    await sendTelegramMessage(
-      env,
-      fetcher,
-      chatId,
-      `Nearby browsing is coming next. For now, you can return to this invite page: ${profileUrl}`,
-    );
+    await sendDiscoveryPlaceholder(env, fetcher, chatId, command.handle);
     return { ok: true, action: "discover_placeholder", handle: command.handle };
   }
 
@@ -225,10 +252,61 @@ async function getInvite(
     fetcher,
     `/rest/v1/invites?id=eq.${
       encodeURIComponent(inviteId)
-    }&select=id,invitee_id,status`,
+    }&select=id,invitee_id,schedule_id,status`,
   );
 
   return rows[0] ?? null;
+}
+
+async function getHostHandleForSchedule(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  scheduleId: string,
+) {
+  const schedules = await supabaseRest<ScheduleRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/schedules?id=eq.${encodeURIComponent(scheduleId)}&select=user_id`,
+  );
+
+  const userId = schedules[0]?.user_id;
+  if (!userId) return null;
+
+  const profiles = await supabaseRest<ProfileRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=handle`,
+  );
+
+  return profiles[0]?.handle || null;
+}
+
+async function getLatestBrowseHandleForChat(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  chatId: string,
+) {
+  const connections = await supabaseRest<TelegramConnectionRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/telegram_connections?telegram_chat_id=eq.${
+      encodeURIComponent(chatId)
+    }&is_active=eq.true&select=invitee_id&order=updated_at.desc&limit=1`,
+  );
+
+  const inviteeId = connections[0]?.invitee_id;
+  if (!inviteeId) return null;
+
+  const invites = await supabaseRest<InviteRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/invites?invitee_id=eq.${
+      encodeURIComponent(inviteeId)
+    }&select=id,invitee_id,schedule_id,status&order=created_at.desc&limit=1`,
+  );
+
+  const scheduleId = invites[0]?.schedule_id;
+  return scheduleId ? getHostHandleForSchedule(env, fetcher, scheduleId) : null;
 }
 
 async function upsertInviteeTelegramConnection(
@@ -307,6 +385,7 @@ async function sendTelegramMessage(
   fetcher: Fetcher,
   chatId: string,
   text: string,
+  replyMarkup?: Record<string, unknown>,
 ) {
   const response = await fetcher(
     `${
@@ -319,6 +398,7 @@ async function sendTelegramMessage(
         chat_id: chatId,
         text,
         disable_web_page_preview: true,
+        ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
       }),
     },
   );
@@ -329,6 +409,35 @@ async function sendTelegramMessage(
         .text()}`,
     );
   }
+}
+
+async function sendDiscoveryPlaceholder(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  chatId: string,
+  handle: string,
+) {
+  const profileUrl = `${env.publicSiteUrl.replace(/\/+$/, "")}/${
+    encodeURIComponent(handle)
+  }`;
+  await sendTelegramMessage(
+    env,
+    fetcher,
+    chatId,
+    `Nearby browsing is coming next. For now, you can return to this invite page: ${profileUrl}`,
+  );
+}
+
+function browseProfilesKeyboard() {
+  return {
+    keyboard: [[{ text: BROWSE_PROFILES_LABEL }]],
+    resize_keyboard: true,
+    one_time_keyboard: true,
+  };
+}
+
+function removeKeyboard() {
+  return { remove_keyboard: true };
 }
 
 function normalizeTelegramUsername(username?: string) {
