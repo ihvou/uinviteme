@@ -44,6 +44,8 @@ Current caveat: submission is still direct browser writes to Supabase. Before pu
 
 ## Scenario 3: Host Reviews And Accepts An Invite
 
+Status: Implemented, with idempotency hardening still planned.
+
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
 | 1 | Host | Opens `/invites`. | App loads pending invites owned by the host schedule. |
@@ -110,7 +112,7 @@ Success condition: a visitor can submit a real invite without Telegram, but cann
 
 ### Scenario 7: Visitor Enables Telegram Notifications After Invite
 
-Status: To be implemented.
+Status: Implemented for web-host acceptance.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
@@ -119,7 +121,7 @@ Status: To be implemented.
 | 3 | System | Host later accepts invite. | `accept-invite` creates/finds the date and sends accepted-invite notification when Telegram is linked. |
 | 4 | Bot | Sends accepted notification to visitor. | Visitor receives acceptance message with host-approved contact channel. |
 
-Current implementation covers steps 1-4 for web-host acceptance. Success condition for the full scenario: visitor receives accepted-invite notification in Telegram only after opting in.
+Current implementation covers steps 1-4 when the host accepts from the web app. Remaining work: host Telegram account linking and Telegram-side accept/decline.
 
 ### Scenario 8: Host Administers Invites In Telegram
 
@@ -137,7 +139,7 @@ Success condition: a linked host can review and act on invites from Telegram wit
 
 ### Scenario 9: Host Contact Sharing On Acceptance
 
-Status: To be implemented.
+Status: Partially implemented.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
@@ -146,6 +148,8 @@ Status: To be implemented.
 | 3 | System | Notifies opted-in visitor. | Telegram notification includes only the selected host contact method. |
 
 Success condition: accepted invite notifications share exactly the contact method the host selected.
+
+Current caveat: Instagram contact sharing is usable when the host selects Instagram and has a handle. Telegram contact sharing is still minimal until host Telegram linking exists.
 
 ### Scenario 10: Safety Pack Telegram Check-In And SMS Emergency Alert
 
