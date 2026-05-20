@@ -41,15 +41,16 @@ uInvite.Me lets a host publish a public invite page with availability and screen
 
 Telegram is feasible inside Supabase using an Edge Function webhook. Treat it as a host admin, visitor notification/discovery, and Safety Pack check-in surface, not a separate source of workflow truth.
 
-Preferred future files:
+Current and future files:
 
 ```txt
 supabase/functions/telegram-webhook/index.ts
+supabase/functions/telegram-webhook/handler.ts
 supabase/functions/_shared/telegram.ts
 supabase/functions/_shared/supabaseAdmin.ts
 ```
 
-The webhook should validate Telegram's secret header, map Telegram chat IDs to app users or opted-in invitees, and call the same trusted accept/decline/safety functions used by the web app.
+The webhook validates Telegram's secret header and maps visitor invite-update starts to opted-in invitees. Future handlers should call the same trusted accept/decline/safety functions used by the web app.
 
 ## Before Finalizing Work
 

@@ -72,7 +72,7 @@ Current caveat: activation is UI/database state only. Real SMS/Telegram reminder
 
 ## Scenario 5: Telegram Bot Extension
 
-Status: To be implemented.
+Status: Partially implemented.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
@@ -114,12 +114,12 @@ Status: To be implemented.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
-| 1 | Visitor | Clicks "Enable Telegram notifications" after invite submission. | App opens a Telegram deep link with an invite-specific link token. |
-| 2 | Visitor | Starts the bot. | `telegram-webhook` validates the start token and links the Telegram chat to the invite/invitee. |
+| 1 | Visitor | Clicks "Enable Telegram notifications" after invite submission. | App opens a Telegram deep link with an invite-specific start payload. |
+| 2 | Visitor | Starts the bot. | `telegram-webhook` validates Telegram's secret header and links the Telegram chat to the invite/invitee. |
 | 3 | System | Host later accepts invite. | `accept-invite` creates the date and queues accepted-invite notification. |
 | 4 | Bot | Sends accepted notification to visitor. | Visitor receives host-approved contact details through Telegram. |
 
-Success condition: visitor receives accepted-invite notification in Telegram only after opting in.
+Current implementation covers steps 1-2. Success condition for the full scenario: visitor receives accepted-invite notification in Telegram only after opting in.
 
 ### Scenario 8: Host Administers Invites In Telegram
 

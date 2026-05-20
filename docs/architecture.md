@@ -16,9 +16,9 @@ flowchart LR
   supabase --> auth["Supabase Auth"]
   supabase --> db["Postgres + RLS"]
   supabase --> storage["Storage<br/>avatars"]
-  supabase -. future .-> functions["Edge Functions"]
+  supabase --> functions["Edge Functions"]
 
-  functions -. future .-> botapi["Telegram Bot API"]
+  functions --> botapi["Telegram Bot API"]
   functions -. future .-> sms["SMS provider"]
 ```
 
@@ -31,8 +31,8 @@ flowchart LR
 | Supabase Auth | Host signup/signin and browser session persistence | Current auth is email/password. |
 | Supabase Postgres | Profiles, schedules, slots, screening config, invitees, invites, dates, safety packs, catalogs | RLS is the primary security boundary. |
 | Supabase Storage | Profile avatar uploads | Uses the `avatars` bucket from the browser. |
-| Supabase Edge Functions | Not implemented yet | Recommended for trusted server-side workflows. |
-| Telegram Bot | Not implemented yet | Feasible via Supabase Edge Functions as a webhook receiver. |
+| Supabase Edge Functions | `telegram-webhook` is committed for visitor Telegram opt-in; other trusted workflows are still pending | Recommended for trusted server-side workflows. |
+| Telegram Bot | Visitor invite-update linking is implemented in the webhook; host admin, discovery menus, and accepted notifications are pending | Uses Telegram webhook secret validation and Supabase Function Secrets. |
 
 ## Current Data Flow
 
@@ -60,6 +60,28 @@ sequenceDiagram
 ```
 
 This works for the current hosted MVP, but several sensitive transitions should move server-side before public launch. See [tasks.md](../tasks.md).
+
+## Current Telegram Opt-In Flow
+
+```mermaid
+sequenceDiagram
+  participant V as Visitor
+  participant UI as React app
+  participant T as Telegram
+  participant F as Supabase Edge Function<br/>telegram-webhook
+  participant DB as Supabase Postgres
+
+  V->>UI: Submit invite in web app
+  UI->>UI: Build invite-specific Telegram start link
+  V->>T: Open "Enable Telegram notifications"
+  T->>F: POST /telegram-webhook with /start invite_updates_<invite>
+  F->>F: Verify X-Telegram-Bot-Api-Secret-Token
+  F->>DB: Find invite and invitee
+  F->>DB: Insert/update telegram_connections
+  F->>T: Send confirmation message
+```
+
+This is the first backend-owned Telegram slice. It does not yet send accepted-invite notifications; that belongs with the future `accept-invite` workflow.
 
 ## Security Boundary
 
@@ -115,7 +137,12 @@ sequenceDiagram
   F->>API: sendMessage/editMessage/reply markup
 ```
 
-Possible bot features:
+Implemented first:
+
+- `/start invite_updates_<invite>` links a visitor Telegram chat to the invitee for that submitted invite.
+- `/start discover_<handle>` replies with a placeholder and link back to the public invite page.
+
+Next bot features:
 
 - `/start` and account linking for hosts.
 - Notify host when a new invite arrives.
@@ -172,7 +199,7 @@ Planned data changes:
 
 | Data area | Purpose |
 |---|---|
-| `telegram_accounts` | Link Telegram chat/user IDs to app users or invitees. |
+| `telegram_connections` | Current table linking Telegram chat/user IDs to app users or invitees. Future migrations may split this into a stricter `telegram_accounts` model. |
 | `phone_verifications` | Store OTP challenges, verification status, expiry, and provider metadata. |
 | `notification_outbox` / `notification_deliveries` | Queue and audit Telegram/SMS notifications. |
 | `trusted_contacts` | Store trusted-contact phone numbers for emergency alerts. |

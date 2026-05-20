@@ -95,5 +95,5 @@ The highest priority gaps are tracked in [tasks.md](tasks.md). In short:
 - Implement real Safety Pack notifications.
 - Add CAPTCHA/rate limiting.
 - Clean env handling.
-- Add Supabase Edge Functions to the repo.
+- Continue moving trusted backend workflows into Supabase Edge Functions.
 - Implement Telegram for host/visitor notifications and Safety Pack check-ins, with trusted-contact escalation by SMS.

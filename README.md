@@ -6,7 +6,7 @@ The app was originally generated in Lovable, but the current runtime is independ
 
 - Frontend hosting: Cloudflare Pages
 - Source control: GitHub repo `ihvou/uinviteme`
-- Backend: Supabase Auth, Postgres, Storage, and future Edge Functions
+- Backend: Supabase Auth, Postgres, Storage, and Supabase Edge Functions
 - Production URL: <https://uinviteme.pages.dev/>
 
 ## Documentation
@@ -71,7 +71,39 @@ These publishable values are visible to browser users by design. Database securi
 
 `VITE_TELEGRAM_BOT_USERNAME` is optional. When set, the public invite success screen deep-links visitors into Telegram for accepted-invite notifications and nearby discovery.
 
-For production, configure these values in Cloudflare Pages project settings. For future Supabase Edge Functions, store secrets with Supabase Function Secrets, not in Cloudflare frontend env vars.
+For production, configure these values in Cloudflare Pages project settings. Store server-only values with Supabase Function Secrets, not in Cloudflare frontend env vars:
+
+```sh
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_WEBHOOK_SECRET=
+PUBLIC_SITE_URL=https://uinvite.me
+```
+
+Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions. Never add `TELEGRAM_BOT_TOKEN` or the service-role key to a `VITE_` variable.
+
+## Supabase Edge Functions
+
+Committed functions:
+
+| Function | Purpose | Status |
+|---|---|---|
+| `telegram-webhook` | Receives Telegram bot updates, verifies Telegram's webhook secret header, and links `/start invite_updates_<invite>` chats to invitees. | Local code and tests are in repo; deploy when bot secrets are ready. |
+
+Useful commands:
+
+```sh
+deno test supabase/functions/telegram-webhook/handler.test.ts
+supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... PUBLIC_SITE_URL=https://uinvite.me
+supabase functions deploy telegram-webhook
+```
+
+After deploy, configure BotFather/Telegram `setWebhook` to point at:
+
+```txt
+https://<project-ref>.supabase.co/functions/v1/telegram-webhook
+```
+
+Use the same `TELEGRAM_WEBHOOK_SECRET` value as Telegram's `secret_token`.
 
 ## Deployment
 
