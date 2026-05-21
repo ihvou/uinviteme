@@ -187,38 +187,56 @@ Important constraints:
 - Treat Telegram chat IDs as sensitive personal data.
 - Telegram complements SMS: Telegram is for host/visitor app notifications and check-ins; trusted-contact escalation is SMS-only for now.
 
+## SMS Provider Decision
+
+Use Twilio for the MVP SMS layer.
+
+| Use case | Provider capability | Notes |
+|---|---|---|
+| Visitor phone verification | Twilio Verify | Used by web invite flow and Telegram discovery invite gate. |
+| Safety Pack trusted-contact alert | Twilio Programmable Messaging | Used for manual Emergency and missed-check-in escalation. |
+
+Implementation rules:
+
+- Keep Twilio behind a small server-side SMS provider module so a later Vonage or regional provider fallback is possible.
+- Store Twilio credentials only as Supabase Function Secrets: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SERVICE_SID`, and `TWILIO_MESSAGING_SERVICE_SID` or sender configuration.
+- Never expose Twilio values through Cloudflare frontend variables or any `VITE_` variable.
+- Log provider IDs, delivery status, failure reasons, and idempotency keys for OTP and Safety Pack SMS.
+- Treat phone numbers as sensitive personal data. Store only the normalized E.164 value and avoid logging full numbers in function logs.
+
 ## Planned Notification And Telegram Rules
 
-These rules describe the next implementation phase. See [User Journey Scenarios](user-journeys.md#to-be-implemented-scenarios).
+These rules describe the next implementation phase. See [User Journey Scenarios](user-journeys.md#notification-and-telegram-phase-scenarios).
 
 | Area | Rule |
 |---|---|
 | Web invite submission | Visitor submits in the web app and must verify phone by SMS before `submit-invite` succeeds. |
-| Mock phone verification | Current web wizard uses a test code and stores `invitees.phone_verified = true`; provider-backed verification still belongs server-side. |
+| SMS provider | Twilio is the MVP provider: Verify for OTP, Programmable Messaging for Safety Pack alerts. |
+| Mock phone verification | Current web wizard uses a test code and stores `invitees.phone_verified = true`; Twilio-backed verification still belongs server-side. |
 | Telegram opt-in | Visitor is prompted to enable Telegram notifications after successful invite submission. Telegram is optional for the invite itself. |
 | Duplicate prevention | Enforce one active pending invite per verified phone per host. |
 | Host admin | Linked hosts receive new-invite notifications and can accept/reject in Telegram. |
 | Visitor accepted notification | Only visitors who opted into Telegram get accepted-invite notifications through the bot. |
 | Host contact sharing | Host chooses accepted-contact method, initially `telegram` or `instagram`. Host phone is not shared by default. |
 | Invite page visibility | `public_profile_enabled = false` hides the public profile entirely. |
-| Discovery visibility | Add `discovery_enabled`, default true. Discovery only includes public, active, discovery-enabled profiles. |
+| Discovery visibility | `discovery_enabled` defaults true. Discovery only includes public, active, discovery-enabled profiles. |
 | Safety check-in | Host receives Telegram check-in reminders. Trusted contact receives SMS only for emergency or missed check-in. |
 | Discovery location | Start from the first viewed/invited host city, then use Telegram native location or manually sent city if provided. |
-| Discovery phone gate | Visitor can browse before phone verification, but the first Telegram-origin invite link is gated by Telegram phone verification. Current verification is mocked with test code `123456`; provider-backed verification remains a production task. |
+| Discovery phone gate | Visitor can browse before phone verification, but the first Telegram-origin invite link is gated by Telegram phone verification. Current verification is mocked with test code `123456`; Twilio-backed verification remains a production task. |
 
 Planned backend surface:
 
 | Function | Purpose |
 |---|---|
 | `telegram-webhook` | Receive Telegram updates, link accounts, process callback buttons, drive bot menus. |
-| `send-phone-otp` | Send SMS OTP to visitor phone numbers. |
-| `verify-phone-otp` | Verify OTP and issue a short-lived phone verification reference. |
+| `send-phone-otp` | Send SMS OTP to visitor phone numbers through Twilio Verify. |
+| `verify-phone-otp` | Verify Twilio OTP and issue a short-lived phone verification reference. |
 | `submit-invite` | Validate public invite payload, phone verification, duplicate rule, screening, and create invite server-side. |
 | `accept-invite` | Transactionally accept invite, create date and Safety Pack draft, enqueue notifications. |
 | `decline-invite` | Transactionally decline invite and notify visitor when applicable. |
 | `set-profile-visibility` | Let web/bot enable or disable public profile and discovery visibility. |
 | `safety-checkin-reminder` | Scheduled reminder and missed-check-in processor. |
-| `safety-alert` | Send trusted-contact SMS for emergency or missed check-in. |
+| `safety-alert` | Send trusted-contact SMS for emergency or missed check-in through Twilio Messaging. |
 
 Planned data changes:
 
@@ -228,6 +246,7 @@ Planned data changes:
 | `discovery_sessions` | Stores Telegram chat discovery context, current profile, pending invite profile, and mock phone verification state. |
 | `phone_verifications` | Store OTP challenges, verification status, expiry, and provider metadata. |
 | `notification_outbox` / `notification_deliveries` | Queue and audit Telegram/SMS notifications. |
+| `sms_messages` | Optional focused delivery table for Twilio message SID, recipient purpose, delivery status, failure reason, and callback timestamps. |
 | `trusted_contacts` | Store trusted-contact phone numbers for emergency alerts. |
 | `profiles.discovery_enabled` | Control discovery separately from public profile visibility. |
 | `profiles.instagram_handle` | Host Instagram contact for accepted-invite sharing. |

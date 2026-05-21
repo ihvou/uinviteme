@@ -12,7 +12,15 @@ This document captures the main success paths for the product actors and system.
 | System | Enforce auth, privacy, RLS, workflow state, and notifications. |
 | Telegram bot | Future interaction surface for host administration, visitor accepted-invite notifications, discovery, and Safety Pack check-ins. |
 
+Status labels:
+
+- Implemented: available in the current product.
+- Partially implemented: usable MVP exists, but a production blocker remains.
+- To be implemented: tracked in [Production MVP Tasks](../tasks.md).
+
 ## Scenario 1: Host Onboards And Publishes A Public Invite Page
+
+Status: Implemented, with token-link caveat still tracked in tasks.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
@@ -28,6 +36,8 @@ Success condition: a signed-out visitor can open `/:handle` and see host profile
 Current caveat: dashboard token links are still unreliable; public profile links work.
 
 ## Scenario 2: Visitor Requests A Date From A Public Profile
+
+Status: Implemented as browser-write MVP; trusted `submit-invite` and real SMS verification are still to be implemented.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
@@ -60,13 +70,15 @@ Current caveat: acceptance is now server-side through `accept-invite`, but stron
 
 ## Scenario 4: Host Activates Safety Pack
 
+Status: Partially implemented as UI/database state; real check-ins and Twilio SMS escalation are to be implemented.
+
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
 | 1 | Host | Opens `/dates/:dateId/safety`. | App loads or creates a Safety Pack draft. |
 | 2 | Host | Reviews trusted-contact share text and check-in timing. | System shows check-in and escalation time. |
 | 3 | Host | Activates Safety Pack. | Safety Pack status becomes active. |
 | 4 | Host | Uses preview actions. | UI shows All good, Call me, and Emergency actions. |
-| 5 | Trusted contact | Future: receives emergency or missed-check-in alert. | Future backend sends SMS only when escalation is needed. |
+| 5 | Trusted contact | Future: receives emergency or missed-check-in alert. | Future backend sends Twilio SMS only when escalation is needed. |
 
 Success condition: Safety Pack is active and visible to the host.
 
@@ -88,13 +100,13 @@ Success condition: Telegram becomes an additional host control surface without b
 
 Important design rule: the bot should call the same trusted backend functions as the web app, not duplicate workflow logic in the browser.
 
-## To Be Implemented Scenarios
+## Notification And Telegram Phase Scenarios
 
-These scenarios describe the next notification and Telegram phases. They are future-state paths, not current production behavior.
+These scenarios describe the notification, SMS, and Telegram phases. Each scenario states whether the current behavior is implemented, partially implemented, or still future work.
 
 ### Scenario 6: Visitor Submits Invite On Web With SMS Verification
 
-Status: Partially implemented with mock SMS verification.
+Status: Partially implemented with mock SMS verification. Real Twilio-backed SMS verification and trusted `submit-invite` are to be implemented.
 
 Telegram is not required before invite submission. The visitor should be able to complete the web invite flow with SMS-verified phone only.
 
@@ -102,15 +114,15 @@ Telegram is not required before invite submission. The visitor should be able to
 |---:|---|---|---|
 | 1 | Visitor | Opens `/:handle` or `/i/:token`. | App loads the host profile, active schedule, available slot, and screening config. |
 | 2 | Visitor | Chooses a slot and enters contact details. | Web wizard collects name, phone, optional Instagram/email/Telegram username, answers, and note. |
-| 3 | Visitor | Requests SMS verification code. | Current mock: web wizard shows/sends test code `123456`. Future: `send-phone-otp` sends an OTP to UAE, Turkey, or Singapore phone number via the configured SMS provider. |
-| 4 | Visitor | Enters OTP in the web wizard. | Current mock: correct code marks phone verified locally and stores `invitees.phone_verified = true`. Future: `verify-phone-otp` marks the phone challenge verified server-side. |
+| 3 | Visitor | Requests SMS verification code. | Current mock: web wizard shows/sends test code `123456`. Future: `send-phone-otp` sends an OTP to UAE, Turkey, or Singapore phone number via Twilio Verify. |
+| 4 | Visitor | Enters OTP in the web wizard. | Current mock: correct code marks phone verified locally and stores `invitees.phone_verified = true`. Future: `verify-phone-otp` checks Twilio Verify and marks the phone challenge verified server-side. |
 | 5 | Visitor | Submits invite. | Current flow still creates invitee + invite from the browser. Future: `submit-invite` validates slot/date/screening/phone verification and creates invitee + invite server-side. |
 | 6 | System | Checks duplicate rule. | One active pending invite per verified phone per host is enforced. |
 | 7 | System | Shows success screen. | Visitor sees confirmation plus "Enable Telegram notifications to know when your invite is accepted." |
 
 Success condition: a visitor can submit a real invite without Telegram, but cannot submit without verified phone or create duplicate pending invites for the same host.
 
-Current caveat: phone verification is mocked in the web app and must move server-side before public launch.
+Current caveat: phone verification is mocked in the web app and must move server-side before public launch. The chosen MVP provider is Twilio.
 
 ### Scenario 7: Visitor Enables Telegram Notifications After Invite
 
@@ -155,21 +167,21 @@ Current caveat: Instagram contact sharing is usable when the host selects Instag
 
 ### Scenario 10: Safety Pack Telegram Check-In And SMS Emergency Alert
 
-Status: To be implemented.
+Status: To be implemented with Telegram check-ins and Twilio SMS alerts.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
 | 1 | Host | Activates Safety Pack. | Backend schedules Telegram check-in reminder. |
 | 2 | Bot | Sends check-in reminder at configured time. | Host sees All good, Call me, and Emergency actions in Telegram. |
 | 3 | Host | Taps All good. | Safety Pack is marked checked-in; no trusted-contact SMS is sent. |
-| 4 | Host | Taps Emergency, or misses check-in after grace period. | Backend sends SMS alert to trusted contact. |
+| 4 | Host | Taps Emergency, or misses check-in after grace period. | Backend sends Twilio SMS alert to trusted contact. |
 | 5 | System | Logs delivery outcome. | Notification delivery is recorded for audit/retry. |
 
 Success condition: host receives Telegram check-in, and trusted contact receives SMS only for emergency or missed check-in.
 
 ### Scenario 11: Visitor Browses Nearby Profiles In Telegram
 
-Status: Implemented as a Telegram MVP with mock phone verification.
+Status: Implemented as a Telegram MVP with profile photos, readable cards, inline slot selection, and mock phone verification. Real Twilio-backed OTP is to be implemented.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
@@ -178,13 +190,13 @@ Status: Implemented as a Telegram MVP with mock phone verification.
 | 3 | Visitor | Optionally shares Telegram native location or sends city manually. | Bot updates discovery location and ranking context. |
 | 4 | Bot | Shows one profile at a time. | Only public, active, discovery-enabled profiles are eligible. |
 | 5 | Visitor | Taps Invite or Skip. | Invite opens the web invite flow; Skip records discovery event and shows next profile. |
-| 6 | Visitor | First invites from Telegram discovery before phone validation. | Bot runs mock phone verification in Telegram before sending the selected invite page link. |
+| 6 | Visitor | First invites from Telegram discovery before phone validation. | Current MVP: bot runs mock phone verification in Telegram before sending the selected invite page link. Future: bot verifies through Twilio before sending the link. |
 
 Success condition: visitor can browse public active profiles one by one in Telegram, with invite actions returning to the web flow.
 
 Important rule: discovery can start before phone verification, but the first Telegram-origin invite link is gated until that visitor verifies a phone number in Telegram.
 
-Current caveat: Telegram phone verification uses test code `123456`; production still needs provider-backed SMS OTP and the future server-side `submit-invite` function to trust the verification end to end.
+Current caveat: Telegram phone verification uses test code `123456`; production still needs Twilio-backed SMS OTP and the future server-side `submit-invite` function to trust the verification end to end.
 
 Discovery eligibility:
 

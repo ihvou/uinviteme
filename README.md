@@ -77,9 +77,13 @@ For production, configure these values in Cloudflare Pages project settings. Sto
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_WEBHOOK_SECRET=
 PUBLIC_SITE_URL=https://uinvite.me
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_VERIFY_SERVICE_SID=
+TWILIO_MESSAGING_SERVICE_SID=
 ```
 
-Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions. Never add `TELEGRAM_BOT_TOKEN` or the service-role key to a `VITE_` variable.
+Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions. Never add `TELEGRAM_BOT_TOKEN`, Twilio secrets, or the service-role key to a `VITE_` variable.
 
 ## Supabase Edge Functions
 
@@ -87,8 +91,8 @@ Committed functions:
 
 | Function | Purpose | Status |
 |---|---|---|
-| `telegram-webhook` | Receives Telegram bot updates, verifies Telegram's webhook secret header, links `/start invite_updates_<invite>` chats to invitees, and runs visitor discovery browsing from `/start discover_<handle>`. | Local code and tests are in repo; deploy after migrations are pushed. |
-| `accept-invite` | Authenticated host endpoint that accepts/declines invites, creates the date on accept, and notifies a Telegram-linked visitor. | Local code and tests are in repo; deploy with default JWT verification. |
+| `telegram-webhook` | Receives Telegram bot updates, verifies Telegram's webhook secret header, links `/start invite_updates_<invite>` chats to invitees, and runs visitor discovery browsing from `/start discover_<handle>`. | Local code and tests are in repo; deployed manually from CLI. |
+| `accept-invite` | Authenticated host endpoint that accepts/declines invites, creates the date on accept, and notifies a Telegram-linked visitor. | Local code and tests are in repo; deployed manually from CLI with default JWT verification. |
 
 Useful commands:
 
@@ -96,6 +100,7 @@ Useful commands:
 deno test supabase/functions/telegram-webhook/handler.test.ts
 deno test supabase/functions/accept-invite/handler.test.ts
 supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... PUBLIC_SITE_URL=https://uinvite.me
+supabase secrets set TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_VERIFY_SERVICE_SID=... TWILIO_MESSAGING_SERVICE_SID=...
 supabase db push
 supabase functions deploy telegram-webhook --no-verify-jwt
 supabase functions deploy accept-invite

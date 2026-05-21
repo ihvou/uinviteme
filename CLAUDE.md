@@ -9,8 +9,7 @@ uInvite.Me lets a host publish a public invite page with availability and screen
 ## Current Runtime
 
 - Frontend: Vite React app hosted on Cloudflare Pages.
-- Backend: Supabase Auth, Postgres with RLS, and Storage.
-- Future backend: Supabase Edge Functions.
+- Backend: Supabase Auth, Postgres with RLS, Storage, and committed Supabase Edge Functions.
 - Lovable is no longer required for runtime hosting.
 
 ## High-Signal Files
@@ -46,11 +45,16 @@ Current and future files:
 ```txt
 supabase/functions/telegram-webhook/index.ts
 supabase/functions/telegram-webhook/handler.ts
+supabase/functions/accept-invite/index.ts
+supabase/functions/accept-invite/handler.ts
 supabase/functions/_shared/telegram.ts
+supabase/functions/_shared/sms.ts
 supabase/functions/_shared/supabaseAdmin.ts
 ```
 
-The webhook validates Telegram's secret header, maps visitor invite-update starts to opted-in invitees, and runs the visitor discovery MVP (`/start discover_<handle>`, one-profile-at-a-time browsing, Skip/Invite, manual city, Telegram location, and mock phone gate). Future handlers should call the same trusted accept/decline/safety functions used by the web app.
+The webhook validates Telegram's secret header, maps visitor invite-update starts to opted-in invitees, and runs the visitor discovery MVP (`/start discover_<handle>`, one-profile-at-a-time browsing, Skip/Invite, manual city, Telegram location, photo cards, inline slot selection, and mock phone gate). Future handlers should call the same trusted accept/decline/safety functions used by the web app.
+
+Twilio is the MVP SMS provider decision: Twilio Verify for visitor OTP and Twilio Programmable Messaging for Safety Pack trusted-contact alerts. Keep Twilio credentials in Supabase Function Secrets only.
 
 ## Before Finalizing Work
 

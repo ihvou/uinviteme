@@ -52,7 +52,12 @@ Do not re-add `bun.lockb` unless the project intentionally moves back to Bun. Do
 
 ## Current Backend Shape
 
-There is no `supabase/functions` directory yet. Current logic uses direct browser calls through `@supabase/supabase-js`.
+Supabase Edge Functions are now part of the repo for trusted backend slices:
+
+- `supabase/functions/telegram-webhook` handles visitor Telegram opt-in, discovery browsing, inline slot callbacks, and the current mock Telegram phone gate.
+- `supabase/functions/accept-invite` handles authenticated host accept/decline decisions and visitor Telegram notifications.
+
+Public invite submission, real phone verification, and Safety Pack escalation still need to move from browser/database state into trusted Edge Functions.
 
 When adding trusted backend behavior:
 
@@ -60,6 +65,7 @@ When adding trusted backend behavior:
 - Keep shared function utilities inside `supabase/functions/_shared` if useful.
 - Use Function Secrets for provider tokens.
 - Prefer idempotent, transactional logic for invite acceptance and notifications.
+- Twilio is the chosen MVP SMS provider: Verify for visitor OTP and Programmable Messaging for Safety Pack trusted-contact alerts. Keep Twilio behind a server-side provider module.
 
 ## Testing Expectations
 
@@ -96,4 +102,4 @@ The highest priority gaps are tracked in [tasks.md](tasks.md). In short:
 - Add CAPTCHA/rate limiting.
 - Clean env handling.
 - Continue moving trusted backend workflows into Supabase Edge Functions.
-- Continue Telegram work beyond the implemented visitor discovery MVP: host administration, real OTP-backed visitor phone verification, Safety Pack check-ins, and trusted-contact escalation by SMS.
+- Continue Telegram work beyond the implemented visitor discovery MVP: host administration, Twilio-backed visitor phone verification, Safety Pack check-ins, and trusted-contact escalation by SMS.
