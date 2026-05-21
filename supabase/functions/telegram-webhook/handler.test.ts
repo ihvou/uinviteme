@@ -99,10 +99,13 @@ Deno.test("handleTelegramUpdate starts discovery and shows one eligible profile"
   if (telegramBody.photo !== "https://images.example/maya.jpg") {
     throw new Error("profile message did not include candidate photo");
   }
-  if (!telegramBody.caption.includes("<b>Maya, 29</b>")) {
+  if (telegramBody.parse_mode !== "MarkdownV2") {
+    throw new Error("profile message did not use Telegram MarkdownV2");
+  }
+  if (!telegramBody.caption.includes("✨ *Maya, 29*")) {
     throw new Error("profile message did not include candidate");
   }
-  if (!telegramBody.caption.includes("<b>Available options</b>")) {
+  if (!telegramBody.caption.includes("🗓 *Available options*")) {
     throw new Error("profile message did not include available options");
   }
   if (!telegramBody.caption.includes("Tuesday, early evening")) {

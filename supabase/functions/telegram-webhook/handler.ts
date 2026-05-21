@@ -13,6 +13,7 @@ const PHONE_CODE_REGEX = /^\d{6}$/;
 const SLOT_CALLBACK_PREFIX = "slot:";
 
 type Fetcher = typeof fetch;
+type TelegramParseMode = "HTML" | "MarkdownV2";
 
 export interface TelegramWebhookEnv {
   supabaseUrl: string;
@@ -1362,7 +1363,7 @@ async function sendTelegramMessage(
   chatId: string,
   text: string,
   replyMarkup?: Record<string, unknown>,
-  parseMode?: "HTML",
+  parseMode?: TelegramParseMode,
 ) {
   const response = await fetcher(
     `${
@@ -1396,6 +1397,7 @@ async function sendTelegramPhoto(
   photoUrl: string,
   caption: string,
   replyMarkup?: Record<string, unknown>,
+  parseMode: TelegramParseMode = "MarkdownV2",
 ) {
   const response = await fetcher(
     `${
@@ -1408,7 +1410,7 @@ async function sendTelegramPhoto(
         chat_id: chatId,
         photo: photoUrl,
         caption,
-        parse_mode: "HTML",
+        parse_mode: parseMode,
         ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
       }),
     },
@@ -1476,7 +1478,7 @@ async function sendDiscoveryProfile(
     chatId,
     caption,
     profileActionKeyboard(),
-    "HTML",
+    "MarkdownV2",
   );
 }
 
@@ -1488,11 +1490,11 @@ async function sendInviteOptions(
   options: DiscoverySlotOption[],
 ) {
   const text = [
-    `<b>Choose an invite option</b>`,
-    `For ${escapeHtml(handle)}, pick the option you want to invite to:`,
+    "🎯 *Choose an invite option*",
+    `Pick one below for ${markdownBold(handle)}:`,
     "",
-    ...options.map((option, index) =>
-      `${index + 1}. ${escapeHtml(formatSlotOption(option))}`
+    ...options.flatMap((option, index) =>
+      formatSlotMarkdownBlock(option, index + 1)
     ),
   ].join("\n");
 
@@ -1502,7 +1504,7 @@ async function sendInviteOptions(
     chatId,
     text,
     inviteOptionsKeyboard(options),
-    "HTML",
+    "MarkdownV2",
   );
 }
 
@@ -1518,8 +1520,15 @@ async function sendInviteLink(
     env,
     fetcher,
     chatId,
-    `Open the selected invite option here: ${url}`,
+    [
+      "✅ *Phone verified*",
+      "",
+      `Open the selected invite option here: [${escapeMarkdown(handle)}](${
+        escapeMarkdownUrl(url)
+      })`,
+    ].join("\n"),
     discoveryKeyboard(),
+    "MarkdownV2",
   );
 }
 
@@ -1529,39 +1538,36 @@ function formatDiscoveryProfile(
   options: DiscoverySlotOption[],
 ) {
   const meta = [
-    profile.city_label ? escapeHtml(profile.city_label) : null,
+    profile.city_label,
     profile.distanceKm !== undefined
       ? `${Math.max(0.1, profile.distanceKm).toFixed(1)} km away`
       : null,
   ].filter(Boolean);
   const lines: string[] = [
-    `<b>${escapeHtml(displayNameForProfile(profile))}</b>`,
+    `✨ ${markdownBold(displayNameForProfile(profile))}`,
   ];
 
-  if (meta.length > 0) lines.push(meta.join(" - "));
+  if (meta.length > 0) lines.push(`📍 ${escapeMarkdown(meta.join(" · "))}`);
   if (profile.bio_one_liner) {
-    lines.push("", `<i>${escapeHtml(profile.bio_one_liner)}</i>`);
+    lines.push("", ...formatMarkdownQuote(profile.bio_one_liner));
   }
 
-  lines.push("", "<b>Available options</b>");
+  lines.push("", "🗓 *Available options*");
 
   if (options.length > 0) {
     for (const [index, option] of options.slice(0, 4).entries()) {
-      lines.push(
-        `${index + 1}. <b>${escapeHtml(formatSlotOption(option))}</b>`,
-      );
-
-      const details = formatSlotDetails(option);
-      if (details) lines.push(`   ${details}`);
+      lines.push(...formatSlotMarkdownBlock(option, index + 1));
     }
   } else {
-    lines.push("No active invite options right now.");
+    lines.push("No active invite options right now\\.");
   }
 
   if (profile.handle) {
     lines.push(
       "",
-      `<a href="${profileUrl(env, profile.handle)}">Open full invite page</a>`,
+      `🔗 [Open full invite page](${
+        escapeMarkdownUrl(profileUrl(env, profile.handle))
+      })`,
     );
   }
 
@@ -1699,11 +1705,33 @@ function formatSlotButton(option: DiscoverySlotOption) {
 
 function formatSlotDetails(option: DiscoverySlotOption) {
   const details = [
-    option.pay_pref ? `Pay: ${formatPayPreference(option.pay_pref)}` : null,
-    option.notes ? option.notes : null,
+    option.pay_pref ? `💳 Pay: ${formatPayPreference(option.pay_pref)}` : null,
+    option.notes ? `📝 ${option.notes}` : null,
   ].filter(Boolean);
 
-  return details.map((detail) => escapeHtml(detail ?? "")).join("\n   ");
+  return details.map((detail) => `   ${escapeMarkdown(detail ?? "")}`).join(
+    "\n",
+  );
+}
+
+function formatSlotMarkdownBlock(option: DiscoverySlotOption, index: number) {
+  const lines = formatSlotMarkdown(option, index);
+  const details = formatSlotDetails(option);
+
+  if (details) lines.push(details);
+  return lines;
+}
+
+function formatSlotMarkdown(option: DiscoverySlotOption, index: number) {
+  const headline = `${weekdayLabel(option.weekday)}, ${
+    formatTimeLabel(option)
+  }`;
+  const lines = [
+    `${index}\\. ${markdownBold(headline)}`,
+    `   📍 ${escapeMarkdown(option.area_label || "Area TBD")}`,
+  ];
+
+  return lines;
 }
 
 function weekdayLabel(weekday: number) {
@@ -1783,12 +1811,20 @@ function parsePendingInviteTarget(value: string) {
   return { handle, slotId: slotId || null };
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+function markdownBold(value: string) {
+  return `*${escapeMarkdown(value)}*`;
+}
+
+function formatMarkdownQuote(value: string) {
+  return value.split(/\r?\n/).map((line) => `> ${escapeMarkdown(line)}`);
+}
+
+function escapeMarkdown(value: string) {
+  return value.replace(/([\\_*\[\]()~`>#+\-=|{}.!])/g, "\\$1");
+}
+
+function escapeMarkdownUrl(value: string) {
+  return value.replace(/([\\)])/g, "\\$1");
 }
 
 function jsonResponse(body: unknown, status = 200) {
