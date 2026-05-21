@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ArrowLeft, ArrowRight, Check, Lock, User, MessageSquare, Send, ShieldCheck } from 'lucide-react';
 import { SlotWithDate, ScreeningConfig, CatalogQuestion, CatalogFormat, CatalogVibeTag, CatalogIntentTag, CatalogBoundaryTag } from '@/hooks/usePublicInvite';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface InviteSubmitSuccess {
   inviteId?: string;
@@ -45,6 +46,7 @@ interface InviteWizardProps {
 
 type Step = 'info' | 'questions' | 'note' | 'review';
 const MOCK_SMS_CODE = '123456';
+const USE_TWILIO_PHONE_VERIFICATION = import.meta.env.VITE_PHONE_VERIFICATION_MODE === 'twilio';
 
 export function InviteWizard({
   slot,
@@ -66,9 +68,11 @@ export function InviteWizard({
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneVerificationSent, setPhoneVerificationSent] = useState(false);
+  const [phoneVerificationId, setPhoneVerificationId] = useState('');
   const [phoneCode, setPhoneCode] = useState('');
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [verifiedPhone, setVerifiedPhone] = useState('');
+  const [phoneVerificationBusy, setPhoneVerificationBusy] = useState(false);
   const [email, setEmail] = useState('');
   const [instagram, setInstagram] = useState('');
   const [telegram, setTelegram] = useState('');
@@ -193,15 +197,51 @@ export function InviteWizard({
 
   const handlePhoneChange = (value: string) => {
     setPhone(value);
+    setPhoneVerificationId('');
     setPhoneCode('');
     setPhoneVerificationSent(false);
     setPhoneVerified(false);
     setVerifiedPhone('');
   };
 
-  const handleSendPhoneCode = () => {
+  const handleSendPhoneCode = async () => {
     if (!trimmedPhone) {
       toast({ title: 'Enter your phone number first', variant: 'destructive' });
+      return;
+    }
+
+    if (USE_TWILIO_PHONE_VERIFICATION) {
+      setPhoneVerificationBusy(true);
+      const { data, error } = await supabase.functions.invoke('send-phone-otp', {
+        body: {
+          phone: trimmedPhone,
+          purpose: 'web_invite',
+          metadata: {
+            slotId: slot.id,
+            targetDate: slot.targetDate,
+          },
+        },
+      });
+      setPhoneVerificationBusy(false);
+
+      if (error || !data?.verificationId) {
+        toast({
+          title: 'Could not send verification code',
+          description: error?.message || 'Please check the phone number and try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setPhoneVerificationId(data.verificationId);
+      setPhoneVerificationSent(true);
+      setPhoneCode('');
+      setPhoneVerified(false);
+      setVerifiedPhone('');
+      toast({
+        title: 'Verification code sent',
+        description: `We sent an SMS code to ${data.phoneE164 || 'your phone'}.`,
+      });
       return;
     }
 
@@ -215,7 +255,38 @@ export function InviteWizard({
     });
   };
 
-  const handleVerifyPhoneCode = () => {
+  const handleVerifyPhoneCode = async () => {
+    if (USE_TWILIO_PHONE_VERIFICATION) {
+      if (!phoneVerificationId) {
+        toast({ title: 'Send a verification code first', variant: 'destructive' });
+        return;
+      }
+
+      setPhoneVerificationBusy(true);
+      const { data, error } = await supabase.functions.invoke('verify-phone-otp', {
+        body: {
+          verificationId: phoneVerificationId,
+          phone: trimmedPhone,
+          code: phoneCode.trim(),
+        },
+      });
+      setPhoneVerificationBusy(false);
+
+      if (error || !data?.verified) {
+        toast({
+          title: 'Invalid verification code',
+          description: error?.message || 'Please check the code and try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setPhoneVerified(true);
+      setVerifiedPhone(trimmedPhone);
+      toast({ title: 'Phone verified' });
+      return;
+    }
+
     if (phoneCode.trim() !== MOCK_SMS_CODE) {
       toast({ title: 'Invalid verification code', variant: 'destructive' });
       return;
@@ -375,7 +446,7 @@ export function InviteWizard({
                       type="button"
                       variant={phoneVerificationSent ? 'outline' : 'secondary'}
                       onClick={handleSendPhoneCode}
-                      disabled={!trimmedPhone || isPhoneVerified}
+                      disabled={!trimmedPhone || isPhoneVerified || phoneVerificationBusy}
                     >
                       {phoneVerificationSent ? 'Resend code' : 'Send code'}
                     </Button>
@@ -385,13 +456,13 @@ export function InviteWizard({
                         onChange={(e) => setPhoneCode(e.target.value)}
                         placeholder="6-digit code"
                         inputMode="numeric"
-                        disabled={!phoneVerificationSent || isPhoneVerified}
+                        disabled={!phoneVerificationSent || isPhoneVerified || phoneVerificationBusy}
                       />
                       <Button
                         type="button"
                         variant="outline"
                         onClick={handleVerifyPhoneCode}
-                        disabled={!phoneVerificationSent || isPhoneVerified}
+                        disabled={!phoneVerificationSent || isPhoneVerified || phoneVerificationBusy}
                       >
                         Verify
                       </Button>
@@ -406,7 +477,11 @@ export function InviteWizard({
                     ) : (
                       <>
                         <Lock className="h-3 w-3" />
-                        <span>Test SMS code: {MOCK_SMS_CODE}</span>
+                        <span>
+                          {USE_TWILIO_PHONE_VERIFICATION
+                            ? 'SMS code expires after about 10 minutes'
+                            : `Test SMS code: ${MOCK_SMS_CODE}`}
+                        </span>
                       </>
                     )}
                   </div>

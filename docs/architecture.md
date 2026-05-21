@@ -164,6 +164,7 @@ Implemented:
 - `/start invite_updates_<invite>` links a visitor Telegram chat to the invitee for that submitted invite.
 - `/start discover_<handle>` starts visitor discovery from the origin profile city, shows one eligible public active discovery-enabled profile at a time, records view/skip/invite events, accepts manual `City: Singapore` context, accepts Telegram native location context, and gates the first Telegram-origin invite link behind mock phone verification.
 - `accept-invite` sends the visitor a Telegram message when the host accepts and the visitor linked Telegram.
+- `send-phone-otp` and `verify-phone-otp` provide Twilio Verify-backed phone verification primitives for the web invite wizard when `VITE_PHONE_VERIFICATION_MODE=twilio`.
 
 Next bot features:
 
@@ -212,7 +213,7 @@ These rules describe the next implementation phase. See [User Journey Scenarios]
 |---|---|
 | Web invite submission | Visitor submits in the web app and must verify phone by SMS before `submit-invite` succeeds. |
 | SMS provider | Twilio is the MVP provider: Verify for OTP, Programmable Messaging for Safety Pack alerts. |
-| Mock phone verification | Current web wizard uses a test code and stores `invitees.phone_verified = true`; Twilio-backed verification still belongs server-side. |
+| Mock phone verification | Current web wizard defaults to a test code unless `VITE_PHONE_VERIFICATION_MODE=twilio` is set; Twilio-backed verification is available through Edge Functions, but trusted submission still belongs server-side. |
 | Telegram opt-in | Visitor is prompted to enable Telegram notifications after successful invite submission. Telegram is optional for the invite itself. |
 | Duplicate prevention | Enforce one active pending invite per verified phone per host. |
 | Host admin | Linked hosts receive new-invite notifications and can accept/reject in Telegram. |
@@ -229,8 +230,8 @@ Planned backend surface:
 | Function | Purpose |
 |---|---|
 | `telegram-webhook` | Receive Telegram updates, link accounts, process callback buttons, drive bot menus. |
-| `send-phone-otp` | Send SMS OTP to visitor phone numbers through Twilio Verify. |
-| `verify-phone-otp` | Verify Twilio OTP and issue a short-lived phone verification reference. |
+| `send-phone-otp` | Send SMS OTP to visitor phone numbers through Twilio Verify. Implemented. |
+| `verify-phone-otp` | Verify Twilio OTP and issue a short-lived phone verification reference. Implemented. |
 | `submit-invite` | Validate public invite payload, phone verification, duplicate rule, screening, and create invite server-side. |
 | `accept-invite` | Transactionally accept invite, create date and Safety Pack draft, enqueue notifications. |
 | `decline-invite` | Transactionally decline invite and notify visitor when applicable. |
@@ -244,9 +245,9 @@ Planned data changes:
 |---|---|
 | `telegram_connections` | Current table linking Telegram chat/user IDs to app users or invitees. Future migrations may split this into a stricter `telegram_accounts` model. |
 | `discovery_sessions` | Stores Telegram chat discovery context, current profile, pending invite profile, and mock phone verification state. |
-| `phone_verifications` | Store OTP challenges, verification status, expiry, and provider metadata. |
+| `phone_verifications` | Store OTP challenges, verification status, expiry, and provider metadata. Implemented by migration. |
 | `notification_outbox` / `notification_deliveries` | Queue and audit Telegram/SMS notifications. |
-| `sms_messages` | Optional focused delivery table for Twilio message SID, recipient purpose, delivery status, failure reason, and callback timestamps. |
+| `sms_messages` | Focused delivery table for future Twilio message SID, recipient purpose, delivery status, failure reason, and callback timestamps. Implemented by migration; status callback handling is pending. |
 | `trusted_contacts` | Store trusted-contact phone numbers for emergency alerts. |
 | `profiles.discovery_enabled` | Control discovery separately from public profile visibility. |
 | `profiles.instagram_handle` | Host Instagram contact for accepted-invite sharing. |

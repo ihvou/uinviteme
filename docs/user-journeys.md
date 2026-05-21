@@ -106,7 +106,7 @@ These scenarios describe the notification, SMS, and Telegram phases. Each scenar
 
 ### Scenario 6: Visitor Submits Invite On Web With SMS Verification
 
-Status: Partially implemented with mock SMS verification. Real Twilio-backed SMS verification and trusted `submit-invite` are to be implemented.
+Status: Partially implemented. The web wizard can use Twilio-backed SMS verification when `VITE_PHONE_VERIFICATION_MODE=twilio`, but trusted `submit-invite` is still to be implemented.
 
 Telegram is not required before invite submission. The visitor should be able to complete the web invite flow with SMS-verified phone only.
 
@@ -114,15 +114,15 @@ Telegram is not required before invite submission. The visitor should be able to
 |---:|---|---|---|
 | 1 | Visitor | Opens `/:handle` or `/i/:token`. | App loads the host profile, active schedule, available slot, and screening config. |
 | 2 | Visitor | Chooses a slot and enters contact details. | Web wizard collects name, phone, optional Instagram/email/Telegram username, answers, and note. |
-| 3 | Visitor | Requests SMS verification code. | Current mock: web wizard shows/sends test code `123456`. Future: `send-phone-otp` sends an OTP to UAE, Turkey, or Singapore phone number via Twilio Verify. |
-| 4 | Visitor | Enters OTP in the web wizard. | Current mock: correct code marks phone verified locally and stores `invitees.phone_verified = true`. Future: `verify-phone-otp` checks Twilio Verify and marks the phone challenge verified server-side. |
+| 3 | Visitor | Requests SMS verification code. | Current default: web wizard shows/sends test code `123456`. With Twilio mode enabled: `send-phone-otp` sends an OTP to UAE, Turkey, or Singapore phone number via Twilio Verify. |
+| 4 | Visitor | Enters OTP in the web wizard. | Current default: correct test code marks phone verified locally. With Twilio mode enabled: `verify-phone-otp` checks Twilio Verify and marks the phone challenge verified server-side. |
 | 5 | Visitor | Submits invite. | Current flow still creates invitee + invite from the browser. Future: `submit-invite` validates slot/date/screening/phone verification and creates invitee + invite server-side. |
 | 6 | System | Checks duplicate rule. | One active pending invite per verified phone per host is enforced. |
 | 7 | System | Shows success screen. | Visitor sees confirmation plus "Enable Telegram notifications to know when your invite is accepted." |
 
 Success condition: a visitor can submit a real invite without Telegram, but cannot submit without verified phone or create duplicate pending invites for the same host.
 
-Current caveat: phone verification is mocked in the web app and must move server-side before public launch. The chosen MVP provider is Twilio.
+Current caveat: Twilio OTP can verify the phone challenge, but final invite creation still writes from the browser and must move to `submit-invite` before public launch.
 
 ### Scenario 7: Visitor Enables Telegram Notifications After Invite
 
