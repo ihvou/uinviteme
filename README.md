@@ -7,7 +7,7 @@ The app was originally generated in Lovable, but the current runtime is independ
 - Frontend hosting: Cloudflare Pages
 - Source control: GitHub repo `ihvou/uinviteme`
 - Backend: Supabase Auth, Postgres, Storage, and Supabase Edge Functions
-- Production URL: <https://uinviteme.pages.dev/>
+- Production URL: <https://uinvite.me/>
 
 ## Documentation
 
