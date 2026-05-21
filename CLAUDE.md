@@ -50,7 +50,7 @@ supabase/functions/_shared/telegram.ts
 supabase/functions/_shared/supabaseAdmin.ts
 ```
 
-The webhook validates Telegram's secret header and maps visitor invite-update starts to opted-in invitees. Future handlers should call the same trusted accept/decline/safety functions used by the web app.
+The webhook validates Telegram's secret header, maps visitor invite-update starts to opted-in invitees, and runs the visitor discovery MVP (`/start discover_<handle>`, one-profile-at-a-time browsing, Skip/Invite, manual city, Telegram location, and mock phone gate). Future handlers should call the same trusted accept/decline/safety functions used by the web app.
 
 ## Before Finalizing Work
 

@@ -31,8 +31,8 @@ flowchart LR
 | Supabase Auth | Host signup/signin and browser session persistence | Current auth is email/password. |
 | Supabase Postgres | Profiles, schedules, slots, screening config, invitees, invites, dates, safety packs, catalogs | RLS is the primary security boundary. |
 | Supabase Storage | Profile avatar uploads | Uses the `avatars` bucket from the browser. |
-| Supabase Edge Functions | `telegram-webhook` is committed for visitor Telegram opt-in; `accept-invite` is committed for authenticated host decisions | Recommended for trusted server-side workflows. |
-| Telegram Bot | Visitor invite-update linking and accepted-invite notifications are implemented; host admin and discovery menus are pending | Uses Telegram webhook secret validation and Supabase Function Secrets. |
+| Supabase Edge Functions | `telegram-webhook` is committed for visitor Telegram opt-in/discovery; `accept-invite` is committed for authenticated host decisions | Recommended for trusted server-side workflows. |
+| Telegram Bot | Visitor invite-update linking, discovery browsing, and accepted-invite notifications are implemented; host admin and safety menus are pending | Uses Telegram webhook secret validation and Supabase Function Secrets. |
 
 ## Current Data Flow
 
@@ -162,7 +162,7 @@ sequenceDiagram
 Implemented:
 
 - `/start invite_updates_<invite>` links a visitor Telegram chat to the invitee for that submitted invite.
-- `/start discover_<handle>` replies with a placeholder and link back to the public invite page.
+- `/start discover_<handle>` starts visitor discovery from the origin profile city, shows one eligible public active discovery-enabled profile at a time, records view/skip/invite events, accepts manual `City: Singapore` context, accepts Telegram native location context, and gates the first Telegram-origin invite link behind mock phone verification.
 - `accept-invite` sends the visitor a Telegram message when the host accepts and the visitor linked Telegram.
 
 Next bot features:
@@ -174,7 +174,7 @@ Next bot features:
 - Send date reminders.
 - Safety Pack check-in buttons.
 - Visitor accepted-invite notifications after the visitor opts into Telegram.
-- Discovery browsing one public active profile at a time.
+- Production SMS OTP for Telegram phone verification and richer discovery ranking.
 
 The bot is not required for the first web invite submission. Visitor Telegram linking happens after invite submission or when the visitor chooses to browse nearby profiles.
 
@@ -204,7 +204,7 @@ These rules describe the next implementation phase. See [User Journey Scenarios]
 | Discovery visibility | Add `discovery_enabled`, default true. Discovery only includes public, active, discovery-enabled profiles. |
 | Safety check-in | Host receives Telegram check-in reminders. Trusted contact receives SMS only for emergency or missed check-in. |
 | Discovery location | Start from the first viewed/invited host city, then use Telegram native location or manually sent city if provided. |
-| Discovery phone gate | Visitor can browse before phone verification, but the first Telegram-origin invite must verify phone inside Telegram before invite creation. |
+| Discovery phone gate | Visitor can browse before phone verification, but the first Telegram-origin invite link is gated by Telegram phone verification. Current verification is mocked with test code `123456`; provider-backed verification remains a production task. |
 
 Planned backend surface:
 
@@ -225,13 +225,14 @@ Planned data changes:
 | Data area | Purpose |
 |---|---|
 | `telegram_connections` | Current table linking Telegram chat/user IDs to app users or invitees. Future migrations may split this into a stricter `telegram_accounts` model. |
+| `discovery_sessions` | Stores Telegram chat discovery context, current profile, pending invite profile, and mock phone verification state. |
 | `phone_verifications` | Store OTP challenges, verification status, expiry, and provider metadata. |
 | `notification_outbox` / `notification_deliveries` | Queue and audit Telegram/SMS notifications. |
 | `trusted_contacts` | Store trusted-contact phone numbers for emergency alerts. |
 | `profiles.discovery_enabled` | Control discovery separately from public profile visibility. |
 | `profiles.instagram_handle` | Host Instagram contact for accepted-invite sharing. |
 | `profiles.accepted_contact_channel` | Host preference for sharing Telegram or Instagram after acceptance. |
-| `discovery_events` | Record viewed/skipped/invited profile events for browsing. |
+| `discovery_events` | Records viewed/skipped/invite-selected profile events plus city/location/phone-gate events for browsing. |
 
 References:
 

@@ -169,7 +169,7 @@ Success condition: host receives Telegram check-in, and trusted contact receives
 
 ### Scenario 11: Visitor Browses Nearby Profiles In Telegram
 
-Status: To be implemented.
+Status: Implemented as a Telegram MVP with mock phone verification.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
@@ -178,11 +178,13 @@ Status: To be implemented.
 | 3 | Visitor | Optionally shares Telegram native location or sends city manually. | Bot updates discovery location and ranking context. |
 | 4 | Bot | Shows one profile at a time. | Only public, active, discovery-enabled profiles are eligible. |
 | 5 | Visitor | Taps Invite or Skip. | Invite opens the web invite flow; Skip records discovery event and shows next profile. |
-| 6 | Visitor | First invites from Telegram discovery before phone validation. | Bot must run phone verification in Telegram before creating the first invite. |
+| 6 | Visitor | First invites from Telegram discovery before phone validation. | Bot runs mock phone verification in Telegram before sending the selected invite page link. |
 
 Success condition: visitor can browse public active profiles one by one in Telegram, with invite actions returning to the web flow.
 
-Important rule: discovery can start before phone verification, but the first Telegram-origin invite cannot be created until that visitor verifies a phone number in Telegram.
+Important rule: discovery can start before phone verification, but the first Telegram-origin invite link is gated until that visitor verifies a phone number in Telegram.
+
+Current caveat: Telegram phone verification uses test code `123456`; production still needs provider-backed SMS OTP and the future server-side `submit-invite` function to trust the verification end to end.
 
 Discovery eligibility:
 

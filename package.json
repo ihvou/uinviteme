@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "seed:telegram-discovery": "node supabase/seeds/telegram_discovery_profiles.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

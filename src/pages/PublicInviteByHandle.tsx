@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,8 @@ const formatIcons: Record<string, typeof Coffee> = {
 
 export default function PublicInviteByHandle() {
   const { handle } = useParams<{ handle: string }>();
+  const [searchParams] = useSearchParams();
+  const selectedSlotId = searchParams.get('slot');
   const {
     profile,
     slots,
@@ -38,9 +40,16 @@ export default function PublicInviteByHandle() {
   const timeBucketLabels: Record<string, string> = {
     morning: 'Morning (9 AM - 12 PM)',
     afternoon: 'Afternoon (12 - 5 PM)',
-    evening: 'Evening (5 - 9 PM)',
-    night: 'Night (9 PM+)',
+    early_evening: 'Early Evening (5 - 8 PM)',
+    late_evening: 'Late Evening (8 PM+)',
   };
+
+  useEffect(() => {
+    if (!selectedSlotId || selectedSlot || slots.length === 0) return;
+
+    const matchingSlot = slots.find((slot) => slot.id === selectedSlotId);
+    if (matchingSlot) setSelectedSlot(matchingSlot);
+  }, [selectedSlotId, selectedSlot, slots]);
 
   const getFormatIcon = (formatId: string | null) => {
     if (!formatId) return Coffee;

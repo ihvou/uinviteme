@@ -39,8 +39,8 @@ export default function PublicInvite() {
   const timeBucketLabels: Record<string, string> = {
     morning: 'Morning (9 AM - 12 PM)',
     afternoon: 'Afternoon (12 - 5 PM)',
-    evening: 'Evening (5 - 9 PM)',
-    night: 'Night (9 PM+)',
+    early_evening: 'Early Evening (5 - 8 PM)',
+    late_evening: 'Late Evening (8 PM+)',
   };
 
   const getFormatIcon = (formatId: string | null) => {

@@ -96,4 +96,4 @@ The highest priority gaps are tracked in [tasks.md](tasks.md). In short:
 - Add CAPTCHA/rate limiting.
 - Clean env handling.
 - Continue moving trusted backend workflows into Supabase Edge Functions.
-- Implement Telegram for host/visitor notifications and Safety Pack check-ins, with trusted-contact escalation by SMS.
+- Continue Telegram work beyond the implemented visitor discovery MVP: host administration, real OTP-backed visitor phone verification, Safety Pack check-ins, and trusted-contact escalation by SMS.
