@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Tables, Json } from '@/integrations/supabase/types';
+import { Tables } from '@/integrations/supabase/types';
 import { addDays, format, getDay } from 'date-fns';
+import { getFunctionErrorMessage } from '@/lib/functionError';
 
 export type InviteLink = Tables<'invite_links'>;
 export type Slot = Tables<'slots'>;
@@ -161,47 +162,35 @@ export function usePublicInvite(token: string | undefined) {
     };
     answers: Record<string, unknown>;
     inviteeNote?: string;
+    phoneVerificationId?: string;
+    phoneVerificationCode?: string;
   }) => {
     if (!inviteLink) return { error: 'No invite link' };
 
     try {
-      // Create invitee record (avoid SELECT/RETURNING to keep anon inserts simple under RLS)
-      const inviteeId = crypto.randomUUID();
-      const { error: inviteeError } = await supabase
-        .from('invitees')
-        .insert({
-          id: inviteeId,
-          name: data.inviteeData.name,
-          phone_e164: data.inviteeData.phone_e164,
-          phone_verified: data.inviteeData.phone_verified ?? false,
-          email: data.inviteeData.email,
-          instagram_handle: data.inviteeData.instagram_handle,
-          telegram_username: data.inviteeData.telegram_username,
-        });
+      const { data: response, error: submitError } = await supabase.functions.invoke('submit-invite', {
+        body: {
+          inviteLinkId: inviteLink.id,
+          slotId: data.slotId,
+          targetDate: data.targetDate,
+          inviteeData: data.inviteeData,
+          answers: data.answers,
+          inviteeNote: data.inviteeNote,
+          phoneVerificationId: data.phoneVerificationId,
+          phoneVerificationCode: data.phoneVerificationCode,
+        },
+      });
 
-      if (inviteeError) throw inviteeError;
+      if (submitError) throw new Error(await getFunctionErrorMessage(submitError));
+      if (response?.error) throw new Error(response.error);
 
-      // Create invite record
-      const inviteId = crypto.randomUUID();
-      const inviteData = {
-        id: inviteId,
-        schedule_id: inviteLink.schedule_id,
-        slot_id: data.slotId,
-        invite_link_id: inviteLink.id,
-        invitee_id: inviteeId,
-        target_date: data.targetDate,
-        answers: data.answers as Json,
-        invitee_note: data.inviteeNote || null,
-        status: 'pending',
+      return {
+        data: {
+          success: true,
+          inviteId: response?.inviteId,
+          inviteeId: response?.inviteeId,
+        },
       };
-      
-      const { error: inviteError } = await supabase
-        .from('invites')
-        .insert([inviteData]);
-
-      if (inviteError) throw inviteError;
-
-      return { data: { success: true, inviteId, inviteeId } };
     } catch (err) {
       return { error: err instanceof Error ? err.message : 'Failed to submit invite' };
     }

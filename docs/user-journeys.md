@@ -37,20 +37,20 @@ Current caveat: dashboard token links are still unreliable; public profile links
 
 ## Scenario 2: Visitor Requests A Date From A Public Profile
 
-Status: Implemented as browser-write MVP; trusted `submit-invite` and real SMS verification are still to be implemented.
+Status: Partially implemented. Submission now uses trusted `submit-invite`; real SMS activation, CAPTCHA, and deeper screening/moderation hardening are still tracked in tasks.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
 | 1 | Visitor | Opens host public invite link. | App reads public profile, active schedule, active slots, and screening config. |
 | 2 | Visitor | Chooses a slot. | Invite wizard opens for that slot/date. |
-| 3 | Visitor | Enters name, phone, optional email, and social handle. | Client validates required contact fields. |
+| 3 | Visitor | Enters name, phone, optional email, and social handle. | Client validates required contact fields; `submit-invite` re-checks required fields server-side. |
 | 4 | Visitor | Answers enabled screening questions. | Answers are collected into the invite payload. |
-| 5 | Visitor | Adds an optional note and submits. | App inserts invitee and invite records. |
+| 5 | Visitor | Adds an optional note and submits. | App calls `submit-invite`, which validates the schedule, slot, invite link/public profile, phone verification, and duplicate pending invite rule before creating invitee and invite records. |
 | 6 | System | Shows success message. | Host dashboard shows a pending invite. |
 
 Success condition: the visitor sees "Request Sent" and the host sees one pending invite.
 
-Current caveat: submission is still direct browser writes to Supabase. Before public launch, this should move to a `submit-invite` Edge Function with CAPTCHA, server validation, and moderation.
+Current caveat: submission is server-side now, but public launch still needs CAPTCHA, atomic one-time link consumption, stronger target-date validation, and server-side screening/moderation enforcement.
 
 ## Scenario 3: Host Reviews And Accepts An Invite
 
@@ -86,12 +86,12 @@ Current caveat: activation is UI/database state only. Real SMS/Telegram reminder
 
 ## Scenario 5: Telegram Bot Extension
 
-Status: Partially implemented.
+Status: Partially implemented: host invite administration is implemented; Safety Pack bot actions are future work.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
-| 1 | Host | Starts the Telegram bot and links account. | Bot stores Telegram chat ID against host identity after verification. |
-| 2 | System | New invite arrives. | Edge Function sends Telegram notification with summary. |
+| 1 | Host | Creates a Telegram link in Settings and starts the bot. | Bot stores Telegram chat ID against host identity after token verification. |
+| 2 | System | New invite arrives. | `submit-invite` sends Telegram notification with summary. |
 | 3 | Host | Taps Accept or Decline inline button. | Bot webhook calls trusted accept/decline logic. |
 | 4 | System | Date is created or invite declined. | Bot confirms action and app state updates. |
 | 5 | Host | Activates Safety Pack or taps check-in action. | Bot can act as notification channel for safety workflow. |
@@ -106,7 +106,7 @@ These scenarios describe the notification, SMS, and Telegram phases. Each scenar
 
 ### Scenario 6: Visitor Submits Invite On Web With SMS Verification
 
-Status: Partially implemented. The web wizard can use Twilio-backed SMS verification when `VITE_PHONE_VERIFICATION_MODE=twilio`, but trusted `submit-invite` is still to be implemented.
+Status: Partially implemented. The web wizard uses trusted `submit-invite`; mock phone verification works today and Twilio-backed SMS verification is available once Twilio secrets and migrations are active.
 
 Telegram is not required before invite submission. The visitor should be able to complete the web invite flow with SMS-verified phone only.
 
@@ -116,13 +116,13 @@ Telegram is not required before invite submission. The visitor should be able to
 | 2 | Visitor | Chooses a slot and enters contact details. | Web wizard collects name, phone, optional Instagram/email/Telegram username, answers, and note. |
 | 3 | Visitor | Requests SMS verification code. | Current default: web wizard shows/sends test code `123456`. With Twilio mode enabled: `send-phone-otp` sends an OTP to UAE, Turkey, or Singapore phone number via Twilio Verify. |
 | 4 | Visitor | Enters OTP in the web wizard. | Current default: correct test code marks phone verified locally. With Twilio mode enabled: `verify-phone-otp` checks Twilio Verify and marks the phone challenge verified server-side. |
-| 5 | Visitor | Submits invite. | Current flow still creates invitee + invite from the browser. Future: `submit-invite` validates slot/date/screening/phone verification and creates invitee + invite server-side. |
+| 5 | Visitor | Submits invite. | `submit-invite` validates slot/date/link, re-checks mock code or approved Twilio verification reference, enforces one pending invite per verified phone per host, and creates invitee + invite server-side. |
 | 6 | System | Checks duplicate rule. | One active pending invite per verified phone per host is enforced. |
 | 7 | System | Shows success screen. | Visitor sees confirmation plus "Enable Telegram notifications to know when your invite is accepted." |
 
 Success condition: a visitor can submit a real invite without Telegram, but cannot submit without verified phone or create duplicate pending invites for the same host.
 
-Current caveat: Twilio OTP can verify the phone challenge, but final invite creation still writes from the browser and must move to `submit-invite` before public launch.
+Current caveat: Twilio-backed mode still needs Twilio secrets, remote migrations, and production activation; default mock mode is for local/staging only.
 
 ### Scenario 7: Visitor Enables Telegram Notifications After Invite
 
@@ -135,25 +135,25 @@ Status: Implemented for web-host acceptance.
 | 3 | System | Host later accepts invite. | `accept-invite` creates/finds the date and sends accepted-invite notification when Telegram is linked. |
 | 4 | Bot | Sends accepted notification to visitor. | Visitor receives acceptance message with host-approved contact channel. |
 
-Current implementation covers steps 1-4 when the host accepts from the web app. Remaining work: host Telegram account linking and Telegram-side accept/decline.
+Current implementation covers steps 1-4 when the host accepts from the web app or Telegram.
 
 ### Scenario 8: Host Administers Invites In Telegram
 
-Status: To be implemented.
+Status: Implemented as Telegram admin MVP, except profile visibility controls from the bot are still planned.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
-| 1 | Host | Starts bot from web Settings or bot `/start`. | Telegram account is linked to the host user. |
+| 1 | Host | Creates a Telegram link from web Settings and opens it. | `create-telegram-link` creates a short-lived token; `/start host_<token>` links Telegram chat to the host user. |
 | 2 | System | New invite arrives. | Host gets Telegram message with invite summary and inline Accept/Decline buttons. |
-| 3 | Host | Taps Accept or Decline. | Bot callback calls trusted `accept-invite` or `decline-invite` backend logic. |
+| 3 | Host | Taps Accept or Decline. | Bot callback reuses trusted `accept-invite` backend logic for both decisions. |
 | 4 | System | Updates invite lifecycle. | Pending invite is removed; accepted invite becomes a date; opted-in visitor is notified. |
-| 5 | Host | Uses bot menu to disable/enable invite page. | `public_profile_enabled` is updated and `/:handle` becomes hidden or visible. |
+| 5 | Host | Uses bot menu to disable/enable invite page. | To be implemented: `public_profile_enabled` is updated and `/:handle` becomes hidden or visible. |
 
 Success condition: a linked host can review and act on invites from Telegram without opening the web dashboard.
 
 ### Scenario 9: Host Contact Sharing On Acceptance
 
-Status: Partially implemented.
+Status: Implemented as MVP.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
@@ -163,7 +163,7 @@ Status: Partially implemented.
 
 Success condition: accepted invite notifications share exactly the contact method the host selected.
 
-Current caveat: Instagram contact sharing is usable when the host selects Instagram and has a handle. Telegram contact sharing is still minimal until host Telegram linking exists.
+Current caveat: Telegram contact sharing requires the host to link Telegram first; otherwise the visitor gets fallback copy saying the host can message them there.
 
 ### Scenario 10: Safety Pack Telegram Check-In And SMS Emergency Alert
 

@@ -72,6 +72,29 @@ Deno.test("acceptInvite skips Telegram notification when visitor is not linked",
   }
 });
 
+Deno.test("acceptInvite shares linked host Telegram username when selected", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+
+  await acceptInvite(
+    { inviteId, decision: "accepted" },
+    userId,
+    env,
+    createMockFetcher(calls, {
+      linkedVisitor: true,
+      acceptedContactChannel: "telegram",
+      hostTelegramUsername: "codexhost",
+    }) as typeof fetch,
+  );
+
+  const telegramCall = calls.find((call) => call.url.includes("/sendMessage"));
+  if (!telegramCall?.init?.body) throw new Error("Telegram was not notified");
+
+  const telegramBody = JSON.parse(telegramCall.init.body.toString());
+  if (!telegramBody.text.includes("Contact: Telegram @codexhost")) {
+    throw new Error("Telegram contact was not shared on acceptance");
+  }
+});
+
 Deno.test("acceptInvite rejects hosts who do not own the schedule", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
 
@@ -91,7 +114,11 @@ Deno.test("acceptInvite rejects hosts who do not own the schedule", async () => 
 
 function createMockFetcher(
   calls: Array<{ url: string; init?: RequestInit }>,
-  options: { linkedVisitor: boolean },
+  options: {
+    linkedVisitor: boolean;
+    acceptedContactChannel?: "telegram" | "instagram";
+    hostTelegramUsername?: string;
+  },
 ) {
   return async (url: string | URL | Request, init?: RequestInit) => {
     const normalizedUrl = typeof url === "string"
@@ -155,7 +182,8 @@ function createMockFetcher(
           id: userId,
           display_name: "Codex Canonical Smoke",
           instagram_handle: "codexhost",
-          accepted_contact_channel: "instagram",
+          accepted_contact_channel: options.acceptedContactChannel ??
+            "instagram",
         },
       ]);
     }
@@ -169,6 +197,17 @@ function createMockFetcher(
     }
 
     if (normalizedUrl.includes("/rest/v1/telegram_connections")) {
+      if (normalizedUrl.includes("user_id=eq.")) {
+        return json(
+          options.hostTelegramUsername
+            ? [{
+              telegram_chat_id: "host-chat-id",
+              telegram_username: options.hostTelegramUsername,
+            }]
+            : [],
+        );
+      }
+
       return json(
         options.linkedVisitor
           ? [{ telegram_chat_id: "123456", telegram_username: "visitor" }]

@@ -27,6 +27,9 @@ Deno.test("parseStartCommand understands invite update and discovery payloads", 
   const discoverCommand = parseStartCommand(
     "/start@uinviteme_bot discover_codex96910493",
   );
+  const hostCommand = parseStartCommand(
+    "/start host_abc123",
+  );
 
   if (inviteCommand?.action !== "invite_updates") {
     throw new Error("invite update command was not parsed");
@@ -37,6 +40,10 @@ Deno.test("parseStartCommand understands invite update and discovery payloads", 
     discoverCommand.handle !== "codex96910493"
   ) {
     throw new Error("discover command was not parsed");
+  }
+
+  if (hostCommand?.action !== "host_link" || hostCommand.token !== "abc123") {
+    throw new Error("host link command was not parsed");
   }
 });
 
@@ -73,6 +80,82 @@ Deno.test("handleTelegramUpdate links invitee chat and offers browse", async () 
       "Browse profiles nearby"
   ) {
     throw new Error("confirmation did not offer browse");
+  }
+});
+
+Deno.test("handleTelegramUpdate links host Telegram admin", async () => {
+  const mock = createMockFetcher();
+
+  const result = await handleTelegramUpdate(
+    {
+      message: {
+        text: "/start host_test-token",
+        chat: { id: CHAT_ID },
+        from: { username: "HostUser" },
+      },
+    },
+    env(),
+    mock.fetcher as typeof fetch,
+  );
+
+  if (result.action !== "host_linked") {
+    throw new Error(`unexpected action: ${result.action}`);
+  }
+
+  const connection = mock.telegramConnections.find((row) => row.user_id);
+  if (
+    connection?.user_id !== ORIGIN_ID ||
+    connection.telegram_chat_id !== CHAT_ID ||
+    connection.telegram_username !== "HostUser"
+  ) {
+    throw new Error("host connection payload was incorrect");
+  }
+
+  if (!mock.telegramLinkTokenUsed) {
+    throw new Error("host link token was not marked used");
+  }
+
+  const telegramBody = mock.lastTelegramBody();
+  if (!telegramBody.text.includes("Telegram admin is linked")) {
+    throw new Error("host link confirmation was not sent");
+  }
+});
+
+Deno.test("handleTelegramUpdate lets linked host accept invite", async () => {
+  const mock = createMockFetcher();
+  mock.telegramConnections.push({
+    user_id: ORIGIN_ID,
+    telegram_chat_id: CHAT_ID,
+    telegram_username: "HostUser",
+    is_active: true,
+  });
+
+  const result = await handleTelegramUpdate(
+    {
+      callback_query: {
+        id: "callback-host-accept",
+        data: "host_accept:6c8bcf8f-d128-4338-9ddc-c1bf8bd3424c",
+        from: { username: "HostUser" },
+        message: { chat: { id: CHAT_ID } },
+      },
+    },
+    env(),
+    mock.fetcher as typeof fetch,
+  );
+
+  if (result.action !== "host_invite_accepted") {
+    throw new Error(`unexpected action: ${JSON.stringify(result)}`);
+  }
+
+  const invitePatch = mock.calls.find((call) =>
+    call.url.includes("/rest/v1/invites?id=eq.") &&
+    call.init?.method === "PATCH"
+  );
+  if (!invitePatch) throw new Error("invite was not accepted");
+
+  const telegramBody = mock.lastTelegramBody();
+  if (!telegramBody.text.includes("Invite accepted")) {
+    throw new Error("host accept confirmation was not sent");
   }
 });
 
@@ -342,6 +425,7 @@ function createMockFetcher() {
   const discoverySessions: Array<Record<string, unknown>> = [];
   const discoveryEvents: Array<Record<string, unknown>> = [];
   const telegramConnections: Array<Record<string, unknown>> = [];
+  let telegramLinkTokenUsed = false;
 
   const fetcher = async (url: string | URL | Request, init?: RequestInit) => {
     const normalizedUrl = typeof url === "string"
@@ -387,18 +471,47 @@ function createMockFetcher() {
       );
     }
 
+    if (normalizedUrl.includes("/rest/v1/telegram_link_tokens")) {
+      if (init?.method === "PATCH") {
+        telegramLinkTokenUsed = true;
+        return json({});
+      }
+
+      return json([{
+        id: "link-token-id",
+        user_id: ORIGIN_ID,
+        purpose: "host_link",
+        expires_at: new Date(Date.now() + 60_000).toISOString(),
+        used_at: null,
+      }]);
+    }
+
     if (normalizedUrl.includes("/rest/v1/invites")) {
       return json([
         {
           id: "6c8bcf8f-d128-4338-9ddc-c1bf8bd3424c",
           invitee_id: "f4bc85ec-e916-4c2d-8f9a-4bb831fb3b21",
           schedule_id: "bdb7a138-c215-46bc-b662-a36e0fab1a62",
+          slot_id: "slot-maya-1",
+          target_date: "2026-05-25",
           status: "pending",
         },
       ]);
     }
 
     if (normalizedUrl.includes("/rest/v1/invitees")) {
+      if (normalizedUrl.includes("id=eq.f4bc85ec")) {
+        return json([{
+          id: "f4bc85ec-e916-4c2d-8f9a-4bb831fb3b21",
+          name: "E2E Visitor",
+          phone_e164: "+6591234567",
+          email: "e2e@example.com",
+          instagram_handle: "e2evisitor",
+          telegram_username: "e2evisitor",
+          phone_verified: true,
+        }]);
+      }
+
       return json([]);
     }
 
@@ -410,6 +523,21 @@ function createMockFetcher() {
 
       if (init?.method === "PATCH") {
         return json({});
+      }
+
+      if (normalizedUrl.includes("user_id=not.is.null")) {
+        return json(
+          telegramConnections.filter((row) =>
+            row.telegram_chat_id === CHAT_ID && row.user_id
+          ),
+        );
+      }
+
+      if (normalizedUrl.includes("user_id=eq.")) {
+        const userId = extractEq(normalizedUrl, "user_id");
+        return json(
+          telegramConnections.filter((row) => row.user_id === userId),
+        );
       }
 
       return json([]);
@@ -439,6 +567,29 @@ function createMockFetcher() {
     }
 
     if (normalizedUrl.includes("/rest/v1/slots")) {
+      if (normalizedUrl.includes("id=eq.slot-maya-1")) {
+        return json([
+          {
+            id: "slot-maya-1",
+            schedule_id: "schedule-maya",
+            weekday: 2,
+            time_bucket: "early_evening",
+            time_start: null,
+            time_end: null,
+            area_label: "Marina Bay",
+            area_place_id: null,
+            area_lat: 1.283,
+            area_lng: 103.86,
+            format: null,
+            intent_tag: null,
+            vibe_tags: [],
+            boundary_tags: [],
+            pay_pref: "decide_together",
+            notes: "Dinner with a skyline view.",
+          },
+        ]);
+      }
+
       if (normalizedUrl.includes("schedule_id=eq.schedule-maya")) {
         return json([
           {
@@ -527,7 +678,11 @@ function createMockFetcher() {
 
       if (normalizedUrl.includes(`id=eq.${ORIGIN_ID}`)) {
         return json([
-          profile(ORIGIN_ID, "codex96910493", "Codex Canonical Smoke"),
+          {
+            ...profile(ORIGIN_ID, "codex96910493", "Codex Canonical Smoke"),
+            instagram_handle: "codexhost",
+            accepted_contact_channel: "instagram",
+          },
         ]);
       }
 
@@ -536,6 +691,18 @@ function createMockFetcher() {
         profile(FIRST_PROFILE_ID, "maya", "Maya", 29),
         profile(SECOND_PROFILE_ID, "nora", "Nora", 31),
       ]);
+    }
+
+    if (normalizedUrl.includes("/rest/v1/dates?")) {
+      return json([]);
+    }
+
+    if (normalizedUrl.endsWith("/rest/v1/dates")) {
+      return json({});
+    }
+
+    if (normalizedUrl.endsWith("/rest/v1/notification_log")) {
+      return json({});
     }
 
     if (
@@ -554,6 +721,9 @@ function createMockFetcher() {
     discoverySessions,
     discoveryEvents,
     telegramConnections,
+    get telegramLinkTokenUsed() {
+      return telegramLinkTokenUsed;
+    },
     fetcher,
     lastTelegramBody(method = "/sendMessage") {
       const call = [...calls].reverse().find((item) =>

@@ -39,6 +39,8 @@ interface InviteWizardProps {
     };
     answers: Record<string, unknown>;
     inviteeNote?: string;
+    phoneVerificationId?: string;
+    phoneVerificationCode?: string;
   }) => Promise<{ error?: string; data?: InviteSubmitSuccess }>;
   onCancel: () => void;
   onSuccess: (data?: InviteSubmitSuccess) => void;
@@ -181,6 +183,8 @@ export function InviteWizard({
       },
       answers,
       inviteeNote: note.trim() || undefined,
+      phoneVerificationId: phoneVerificationId || undefined,
+      phoneVerificationCode: phoneCode.trim() || undefined,
     });
     setSubmitting(false);
 

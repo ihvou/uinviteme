@@ -72,7 +72,7 @@ These publishable values are visible to browser users by design. Database securi
 
 `VITE_TELEGRAM_BOT_USERNAME` is optional. When set, the public invite success screen deep-links visitors into Telegram for accepted-invite notifications and nearby discovery.
 
-Set `VITE_PHONE_VERIFICATION_MODE=twilio` only after Twilio Function Secrets are configured and the phone verification functions are deployed. When unset, the invite wizard keeps the current mock-code path for local/staging work.
+Set `VITE_PHONE_VERIFICATION_MODE=twilio` only after Twilio Function Secrets are configured, `PHONE_VERIFICATION_MODE=twilio` is set in Supabase Function Secrets, and the phone verification functions are deployed. When unset, the invite wizard keeps the current mock-code path for local/staging work.
 
 For production, configure these values in Cloudflare Pages project settings. Store server-only values with Supabase Function Secrets, not in Cloudflare frontend env vars:
 
@@ -80,6 +80,8 @@ For production, configure these values in Cloudflare Pages project settings. Sto
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_WEBHOOK_SECRET=
 PUBLIC_SITE_URL=https://uinvite.me
+PHONE_VERIFICATION_MODE=
+MOCK_PHONE_CODE=
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
 TWILIO_VERIFY_SERVICE_SID=
@@ -95,7 +97,9 @@ Committed functions:
 | Function | Purpose | Status |
 |---|---|---|
 | `telegram-webhook` | Receives Telegram bot updates, verifies Telegram's webhook secret header, links `/start invite_updates_<invite>` chats to invitees, and runs visitor discovery browsing from `/start discover_<handle>`. | Local code and tests are in repo; deployed manually from CLI. |
+| `create-telegram-link` | Authenticated host endpoint that creates a short-lived Telegram host-link payload for Settings. | Local code and tests are in repo; deploy with default JWT verification. |
 | `accept-invite` | Authenticated host endpoint that accepts/declines invites, creates the date on accept, and notifies a Telegram-linked visitor. | Local code and tests are in repo; deployed manually from CLI with default JWT verification. |
+| `submit-invite` | Public invite submission endpoint that validates schedule/slot/link, server-checks mock or Twilio phone verification, blocks duplicate pending invites, and creates invitee + invite records with the service role key. | Local code and tests are in repo; deploy before applying the direct-browser-write RLS cleanup migration. |
 | `send-phone-otp` | Starts Twilio Verify SMS OTP for supported visitor phone numbers. | Local code and tests are in repo; deploy after Twilio secrets are set. |
 | `verify-phone-otp` | Checks Twilio Verify OTP and marks the server-side phone challenge approved. | Local code and tests are in repo; deploy after Twilio secrets are set. |
 
@@ -103,14 +107,19 @@ Useful commands:
 
 ```sh
 deno test supabase/functions/telegram-webhook/handler.test.ts
+deno test supabase/functions/create-telegram-link/handler.test.ts
 deno test supabase/functions/accept-invite/handler.test.ts
+deno test supabase/functions/submit-invite/handler.test.ts
 deno test supabase/functions/send-phone-otp/handler.test.ts
 deno test supabase/functions/verify-phone-otp/handler.test.ts
 supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... PUBLIC_SITE_URL=https://uinvite.me
+supabase secrets set PHONE_VERIFICATION_MODE=mock MOCK_PHONE_CODE=123456
 supabase secrets set TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_VERIFY_SERVICE_SID=... TWILIO_MESSAGING_SERVICE_SID=...
 supabase db push
 supabase functions deploy telegram-webhook --no-verify-jwt
+supabase functions deploy create-telegram-link
 supabase functions deploy accept-invite
+supabase functions deploy submit-invite --no-verify-jwt
 supabase functions deploy send-phone-otp
 supabase functions deploy verify-phone-otp
 ```

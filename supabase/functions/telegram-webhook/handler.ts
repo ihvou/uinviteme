@@ -1,3 +1,6 @@
+import { acceptInvite, AcceptInviteEnv } from "../accept-invite/handler.ts";
+import { hashTelegramLinkToken } from "../_shared/telegramLinkToken.ts";
+
 const TELEGRAM_SECRET_HEADER = "x-telegram-bot-api-secret-token";
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -11,6 +14,8 @@ const SHARE_PHONE_LABEL = "Share phone number";
 const MOCK_PHONE_CODE = "123456";
 const PHONE_CODE_REGEX = /^\d{6}$/;
 const SLOT_CALLBACK_PREFIX = "slot:";
+const HOST_ACCEPT_CALLBACK_PREFIX = "host_accept:";
+const HOST_DECLINE_CALLBACK_PREFIX = "host_decline:";
 
 type Fetcher = typeof fetch;
 type TelegramParseMode = "HTML" | "MarkdownV2";
@@ -73,6 +78,9 @@ interface InviteeRecord {
 interface TelegramConnectionRecord {
   id?: string;
   invitee_id?: string;
+  user_id?: string;
+  telegram_chat_id?: string;
+  telegram_username?: string | null;
 }
 
 interface ScheduleRecord {
@@ -137,10 +145,19 @@ interface DiscoveryProfileCandidate extends ProfileRecord {
   distanceKm?: number;
 }
 
+interface TelegramLinkTokenRecord {
+  id: string;
+  user_id: string;
+  purpose: "host_link";
+  expires_at: string;
+  used_at: string | null;
+}
+
 export type StartCommand =
   | { action: "start" }
   | { action: "invite_updates"; inviteId: string }
   | { action: "discover"; handle: string }
+  | { action: "host_link"; token: string }
   | { action: "unknown"; payload: string };
 
 export function compactInviteIdToUuid(value: string) {
@@ -181,6 +198,13 @@ export function parseStartCommand(text: string): StartCommand | null {
     const handle = payload.slice("discover_".length).trim();
     return handle
       ? { action: "discover", handle }
+      : { action: "unknown", payload };
+  }
+
+  if (payload.startsWith("host_")) {
+    const token = payload.slice("host_".length).trim();
+    return token
+      ? { action: "host_link", token }
       : { action: "unknown", payload };
   }
 
@@ -364,6 +388,16 @@ export async function handleTelegramUpdate(
     );
   }
 
+  if (command.action === "host_link") {
+    return await linkHostTelegram(
+      env,
+      fetcher,
+      chatId,
+      username,
+      command.token,
+    );
+  }
+
   await sendTelegramMessage(env, fetcher, chatId, defaultHelpText());
   return { ok: true, action: command.action };
 }
@@ -392,6 +426,32 @@ async function handleTelegramCallback(
       slotId,
     );
     await answerCallbackQuery(env, fetcher, callback.id, "Option selected");
+    return result;
+  }
+
+  if (data?.startsWith(HOST_ACCEPT_CALLBACK_PREFIX)) {
+    const inviteId = data.slice(HOST_ACCEPT_CALLBACK_PREFIX.length);
+    const result = await handleHostInviteDecision(
+      env,
+      fetcher,
+      chatId,
+      inviteId,
+      "accepted",
+    );
+    await answerCallbackQuery(env, fetcher, callback.id, "Invite accepted");
+    return result;
+  }
+
+  if (data?.startsWith(HOST_DECLINE_CALLBACK_PREFIX)) {
+    const inviteId = data.slice(HOST_DECLINE_CALLBACK_PREFIX.length);
+    const result = await handleHostInviteDecision(
+      env,
+      fetcher,
+      chatId,
+      inviteId,
+      "declined",
+    );
+    await answerCallbackQuery(env, fetcher, callback.id, "Invite declined");
     return result;
   }
 
@@ -449,6 +509,147 @@ async function linkInviteUpdates(
     inviteId: invite.id,
     inviteeId: invite.invitee_id,
   };
+}
+
+async function linkHostTelegram(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  chatId: string,
+  username: string | null,
+  token: string,
+) {
+  const tokenHash = await hashTelegramLinkToken(token);
+  const linkToken = await getTelegramLinkToken(env, fetcher, tokenHash);
+
+  if (!linkToken || linkToken.purpose !== "host_link") {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "This host link is invalid. Please create a new Telegram link from Settings.",
+      removeKeyboard(),
+    );
+    return { ok: true, action: "host_link_invalid" };
+  }
+
+  if (linkToken.used_at) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "This host link was already used. Please create a new Telegram link from Settings.",
+      removeKeyboard(),
+    );
+    return { ok: true, action: "host_link_used" };
+  }
+
+  if (Date.parse(linkToken.expires_at) < Date.now()) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "This host link has expired. Please create a new Telegram link from Settings.",
+      removeKeyboard(),
+    );
+    return { ok: true, action: "host_link_expired" };
+  }
+
+  await upsertHostTelegramConnection(env, fetcher, {
+    userId: linkToken.user_id,
+    chatId,
+    username,
+  });
+  await markTelegramLinkTokenUsed(env, fetcher, linkToken.id);
+
+  await sendTelegramMessage(
+    env,
+    fetcher,
+    chatId,
+    "Telegram admin is linked. I'll send new invite requests here with Accept and Decline buttons.",
+    removeKeyboard(),
+  );
+
+  return {
+    ok: true,
+    action: "host_linked",
+    userId: linkToken.user_id,
+  };
+}
+
+async function handleHostInviteDecision(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  chatId: string,
+  inviteId: string,
+  decision: "accepted" | "declined",
+) {
+  if (!UUID_REGEX.test(inviteId)) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "That invite action is invalid. Please open the latest invite message.",
+      removeKeyboard(),
+    );
+    return { ok: true, action: "host_decision_invalid" };
+  }
+
+  const connection = await getHostTelegramConnectionByChat(
+    env,
+    fetcher,
+    chatId,
+  );
+  if (!connection?.user_id) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "Link your host account from Settings before managing invites here.",
+      removeKeyboard(),
+    );
+    return { ok: true, action: "host_not_linked" };
+  }
+
+  try {
+    const result = await acceptInvite(
+      { inviteId, decision },
+      connection.user_id,
+      acceptInviteEnv(env),
+      fetcher,
+    );
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      decision === "accepted"
+        ? "Invite accepted. The date was added to your dashboard."
+        : "Invite declined. It was removed from your pending queue.",
+      removeKeyboard(),
+    );
+
+    return {
+      ok: true,
+      action: `host_invite_${decision}`,
+      inviteId,
+      dateId: result.dateId,
+    };
+  } catch (error) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      error instanceof Error && error.message === "Forbidden"
+        ? "I couldn't update this invite because it belongs to another host account."
+        : "I couldn't update this invite. Please try from the web dashboard.",
+      removeKeyboard(),
+    );
+
+    return {
+      ok: true,
+      action: "host_decision_failed",
+      inviteId,
+    };
+  }
 }
 
 async function startDiscovery(
@@ -1298,6 +1499,106 @@ async function upsertInviteeTelegramConnection(
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+async function getTelegramLinkToken(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  tokenHash: string,
+) {
+  const rows = await supabaseRest<TelegramLinkTokenRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/telegram_link_tokens?token_hash=eq.${
+      encodeURIComponent(tokenHash)
+    }&select=id,user_id,purpose,expires_at,used_at&limit=1`,
+  );
+
+  return rows[0] ?? null;
+}
+
+async function markTelegramLinkTokenUsed(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  tokenId: string,
+) {
+  await supabaseRest(
+    env,
+    fetcher,
+    `/rest/v1/telegram_link_tokens?id=eq.${encodeURIComponent(tokenId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ used_at: new Date().toISOString() }),
+    },
+  );
+}
+
+async function upsertHostTelegramConnection(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  data: { userId: string; chatId: string; username: string | null },
+) {
+  const existing = await supabaseRest<TelegramConnectionRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/telegram_connections?user_id=eq.${
+      encodeURIComponent(data.userId)
+    }&select=id`,
+  );
+
+  const body = {
+    user_id: data.userId,
+    invitee_id: null,
+    telegram_chat_id: data.chatId,
+    telegram_username: data.username,
+    is_active: true,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (existing[0]) {
+    await supabaseRest(
+      env,
+      fetcher,
+      `/rest/v1/telegram_connections?id=eq.${
+        encodeURIComponent(existing[0].id ?? "")
+      }`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      },
+    );
+    return;
+  }
+
+  await supabaseRest(env, fetcher, "/rest/v1/telegram_connections", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+async function getHostTelegramConnectionByChat(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  chatId: string,
+) {
+  const rows = await supabaseRest<TelegramConnectionRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/telegram_connections?telegram_chat_id=eq.${
+      encodeURIComponent(chatId)
+    }&user_id=not.is.null&is_active=eq.true&select=user_id,telegram_chat_id,telegram_username&order=updated_at.desc&limit=1`,
+  );
+
+  return rows[0] ?? null;
+}
+
+function acceptInviteEnv(env: TelegramWebhookEnv): AcceptInviteEnv {
+  return {
+    supabaseUrl: env.supabaseUrl,
+    supabaseServiceRoleKey: env.supabaseServiceRoleKey,
+    telegramBotToken: env.telegramBotToken,
+    telegramApiBaseUrl: env.telegramApiBaseUrl,
+  };
 }
 
 async function chatHasVerifiedInvitee(

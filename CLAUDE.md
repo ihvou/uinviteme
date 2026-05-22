@@ -45,14 +45,18 @@ Current and future files:
 ```txt
 supabase/functions/telegram-webhook/index.ts
 supabase/functions/telegram-webhook/handler.ts
+supabase/functions/create-telegram-link/index.ts
+supabase/functions/create-telegram-link/handler.ts
 supabase/functions/accept-invite/index.ts
 supabase/functions/accept-invite/handler.ts
+supabase/functions/submit-invite/index.ts
+supabase/functions/submit-invite/handler.ts
 supabase/functions/_shared/telegram.ts
 supabase/functions/_shared/sms.ts
 supabase/functions/_shared/supabaseAdmin.ts
 ```
 
-The webhook validates Telegram's secret header, maps visitor invite-update starts to opted-in invitees, and runs the visitor discovery MVP (`/start discover_<handle>`, one-profile-at-a-time browsing, Skip/Invite, manual city, Telegram location, photo cards, inline slot selection, and mock phone gate). Future handlers should call the same trusted accept/decline/safety functions used by the web app.
+The webhook validates Telegram's secret header, maps visitor invite-update starts to opted-in invitees, links host admin chats through short-lived Settings tokens, runs the visitor discovery MVP (`/start discover_<handle>`, one-profile-at-a-time browsing, Skip/Invite, manual city, Telegram location, photo cards, inline slot selection, and mock phone gate), and lets linked hosts accept/decline invite requests. Future safety handlers should call the same trusted backend functions used by the web app.
 
 Twilio is the MVP SMS provider decision: Twilio Verify for visitor OTP and Twilio Programmable Messaging for Safety Pack trusted-contact alerts. Keep Twilio credentials in Supabase Function Secrets only.
 

@@ -337,7 +337,13 @@ async function notifyVisitorIfLinked(
     return { attempted: false, reason: "visitor_not_linked" };
   }
 
-  const text = buildAcceptedMessage(data);
+  const hostConnection = data.profile?.accepted_contact_channel === "telegram"
+    ? await getHostTelegramConnection(env, fetcher, data.profile.id)
+    : null;
+  const text = buildAcceptedMessage({
+    ...data,
+    hostTelegramUsername: hostConnection?.telegram_username ?? null,
+  });
 
   try {
     const telegramResult = await sendTelegramMessage(
@@ -382,9 +388,10 @@ function buildAcceptedMessage(data: {
   invitee: InviteeRecord;
   profile: ProfileRecord | null;
   slot: SlotRecord;
+  hostTelegramUsername?: string | null;
 }) {
   const hostName = data.profile?.display_name || "The host";
-  const contact = getAcceptedContact(data.profile);
+  const contact = getAcceptedContact(data.profile, data.hostTelegramUsername);
   const dateLabel = data.invite.target_date;
   const areaLabel = data.slot.area_label;
 
@@ -395,7 +402,10 @@ function buildAcceptedMessage(data: {
   ].join("\n\n");
 }
 
-function getAcceptedContact(profile: ProfileRecord | null) {
+function getAcceptedContact(
+  profile: ProfileRecord | null,
+  hostTelegramUsername?: string | null,
+) {
   if (!profile) return "Contact details: the host will share them soon.";
 
   if (profile.accepted_contact_channel === "instagram") {
@@ -407,7 +417,27 @@ function getAcceptedContact(profile: ProfileRecord | null) {
     return "Contact: Instagram selected, but the host has not added a handle yet.";
   }
 
+  if (hostTelegramUsername) {
+    return `Contact: Telegram @${hostTelegramUsername.replace(/^@+/, "")}`;
+  }
+
   return "Contact: Telegram selected. The host can message you here.";
+}
+
+async function getHostTelegramConnection(
+  env: AcceptInviteEnv,
+  fetcher: Fetcher,
+  userId: string,
+) {
+  const connections = await getMany<TelegramConnectionRecord>(
+    env,
+    fetcher,
+    `/rest/v1/telegram_connections?user_id=eq.${
+      encodeURIComponent(userId)
+    }&is_active=eq.true&select=telegram_chat_id,telegram_username&order=updated_at.desc&limit=1`,
+  );
+
+  return connections[0] ?? null;
 }
 
 async function sendTelegramMessage(
@@ -474,6 +504,14 @@ async function getOne<T>(
 ) {
   const rows = await supabaseRest<T[]>(env, fetcher, path);
   return rows[0] ?? null;
+}
+
+async function getMany<T>(
+  env: AcceptInviteEnv,
+  fetcher: Fetcher,
+  path: string,
+) {
+  return await supabaseRest<T[]>(env, fetcher, path);
 }
 
 async function supabaseRest<T = unknown>(

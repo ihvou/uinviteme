@@ -1,21 +1,46 @@
-import { Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Heart, ArrowLeft, User, Bell, Loader2, Globe, Compass, Instagram } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { PhotoUpload } from '@/components/settings/PhotoUpload';
-import type { Tables } from '@/integrations/supabase/types';
+import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import {
+  ArrowLeft,
+  Bell,
+  Compass,
+  ExternalLink,
+  Globe,
+  Heart,
+  Instagram,
+  Loader2,
+  MessageSquare,
+  User,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { PhotoUpload } from "@/components/settings/PhotoUpload";
+import type { Tables } from "@/integrations/supabase/types";
+import { getFunctionErrorMessage } from "@/lib/functionError";
+import { getTelegramStartUrl } from "@/lib/telegram";
 
-type Profile = Tables<'profiles'>;
-type AcceptedContactChannel = 'telegram' | 'instagram';
+type Profile = Tables<"profiles">;
+type AcceptedContactChannel = "telegram" | "instagram";
 
 export default function Settings() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -24,20 +49,24 @@ export default function Settings() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [creatingTelegramLink, setCreatingTelegramLink] = useState(false);
+  const [telegramLinkUrl, setTelegramLinkUrl] = useState<string | null>(null);
 
-  const [displayName, setDisplayName] = useState('');
-  const [handle, setHandle] = useState('');
-  const [bioOneLiner, setBioOneLiner] = useState('');
-  const [cityLabel, setCityLabel] = useState('');
+  const [displayName, setDisplayName] = useState("");
+  const [handle, setHandle] = useState("");
+  const [bioOneLiner, setBioOneLiner] = useState("");
+  const [cityLabel, setCityLabel] = useState("");
   const [publicProfileEnabled, setPublicProfileEnabled] = useState(true);
   const [discoveryEnabled, setDiscoveryEnabled] = useState(true);
-  const [instagramHandle, setInstagramHandle] = useState('');
-  const [acceptedContactChannel, setAcceptedContactChannel] = useState<AcceptedContactChannel>('telegram');
+  const [instagramHandle, setInstagramHandle] = useState("");
+  const [acceptedContactChannel, setAcceptedContactChannel] = useState<
+    AcceptedContactChannel
+  >("telegram");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/auth');
+      navigate("/auth");
     }
   }, [user, authLoading, navigate]);
 
@@ -49,24 +78,26 @@ export default function Settings() {
 
   const fetchProfile = async () => {
     if (!user) return;
-    
+
     const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
       .single();
-    
+
     if (data) {
       setProfile(data);
-      setDisplayName(data.display_name || '');
-      setHandle(data.handle || '');
-      setBioOneLiner(data.bio_one_liner || '');
-      setCityLabel(data.city_label || '');
+      setDisplayName(data.display_name || "");
+      setHandle(data.handle || "");
+      setBioOneLiner(data.bio_one_liner || "");
+      setCityLabel(data.city_label || "");
       setPublicProfileEnabled(data.public_profile_enabled ?? true);
       setDiscoveryEnabled(data.discovery_enabled ?? true);
-      setInstagramHandle(data.instagram_handle || '');
+      setInstagramHandle(data.instagram_handle || "");
       setAcceptedContactChannel(
-        data.accepted_contact_channel === 'instagram' ? 'instagram' : 'telegram'
+        data.accepted_contact_channel === "instagram"
+          ? "instagram"
+          : "telegram",
       );
       setPhotoUrl(data.photo_url || null);
     }
@@ -76,23 +107,24 @@ export default function Settings() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const normalizedInstagramHandle = instagramHandle.trim().replace(/^@+/, '');
+    const normalizedInstagramHandle = instagramHandle.trim().replace(/^@+/, "");
 
-    if (acceptedContactChannel === 'instagram' && !normalizedInstagramHandle) {
+    if (acceptedContactChannel === "instagram" && !normalizedInstagramHandle) {
       toast({
-        variant: 'destructive',
-        title: 'Instagram required',
-        description: 'Add an Instagram handle before sharing Instagram after acceptance.',
+        variant: "destructive",
+        title: "Instagram required",
+        description:
+          "Add an Instagram handle before sharing Instagram after acceptance.",
       });
       setSaving(false);
       return;
     }
 
     const { error } = await supabase
-      .from('profiles')
+      .from("profiles")
       .update({
         display_name: displayName,
-        handle: handle.toLowerCase().replace(/[^a-z0-9_]/g, ''),
+        handle: handle.toLowerCase().replace(/[^a-z0-9_]/g, ""),
         bio_one_liner: bioOneLiner,
         city_label: cityLabel,
         public_profile_enabled: publicProfileEnabled,
@@ -100,22 +132,63 @@ export default function Settings() {
         instagram_handle: normalizedInstagramHandle || null,
         accepted_contact_channel: acceptedContactChannel,
       })
-      .eq('id', user.id);
+      .eq("id", user.id);
 
     if (error) {
       toast({
-        variant: 'destructive',
-        title: 'Error saving',
+        variant: "destructive",
+        title: "Error saving",
         description: error.message,
       });
     } else {
       toast({
-        title: 'Saved',
-        description: 'Your profile has been updated.',
+        title: "Saved",
+        description: "Your profile has been updated.",
       });
       fetchProfile();
     }
     setSaving(false);
+  };
+
+  const handleCreateTelegramLink = async () => {
+    setCreatingTelegramLink(true);
+    setTelegramLinkUrl(null);
+
+    const { data, error } = await supabase.functions.invoke(
+      "create-telegram-link",
+      {
+        body: {},
+      },
+    );
+
+    setCreatingTelegramLink(false);
+
+    if (error || !data?.startPayload) {
+      toast({
+        variant: "destructive",
+        title: "Could not create Telegram link",
+        description: error
+          ? await getFunctionErrorMessage(error)
+          : "Please try again.",
+      });
+      return;
+    }
+
+    const url = getTelegramStartUrl(data.startPayload);
+    if (!url) {
+      toast({
+        variant: "destructive",
+        title: "Telegram bot username missing",
+        description: "Set VITE_TELEGRAM_BOT_USERNAME and redeploy the app.",
+      });
+      return;
+    }
+
+    setTelegramLinkUrl(url);
+    toast({
+      title: "Telegram link ready",
+      description: "Open it within 15 minutes to link this account.",
+    });
   };
 
   if (authLoading || loading) {
@@ -132,18 +205,25 @@ export default function Settings() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2">
             <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-            <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+            <span className="font-display text-xl font-semibold text-foreground">
+              uInvite.Me
+            </span>
           </Link>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="mb-8">
-          <Link to="/dashboard" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4"
+          >
             <ArrowLeft className="h-4 w-4" />
             Back to Dashboard
           </Link>
-          <h1 className="font-display text-3xl font-bold text-foreground mb-2">Settings</h1>
+          <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+            Settings
+          </h1>
           <p className="text-muted-foreground">
             Manage your profile and preferences
           </p>
@@ -165,7 +245,7 @@ export default function Settings() {
               <div className="space-y-2">
                 <Label>Profile Photo</Label>
                 <PhotoUpload
-                  userId={user?.id || ''}
+                  userId={user?.id || ""}
                   currentPhotoUrl={photoUrl}
                   displayName={displayName}
                   onPhotoUpdated={setPhotoUrl}
@@ -185,7 +265,9 @@ export default function Settings() {
               <div className="space-y-2">
                 <Label htmlFor="handle">Handle</Label>
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-sm">uinvite.me/</span>
+                  <span className="text-muted-foreground text-sm">
+                    uinvite.me/
+                  </span>
                   <Input
                     id="handle"
                     value={handle}
@@ -235,7 +317,10 @@ export default function Settings() {
 
               <div className="flex items-center justify-between pt-2 border-t">
                 <div className="space-y-0.5">
-                  <Label htmlFor="publicProfile" className="flex items-center gap-2">
+                  <Label
+                    htmlFor="publicProfile"
+                    className="flex items-center gap-2"
+                  >
                     <Globe className="h-4 w-4" />
                     Public Profile
                   </Label>
@@ -252,12 +337,16 @@ export default function Settings() {
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="discovery" className="flex items-center gap-2">
+                  <Label
+                    htmlFor="discovery"
+                    className="flex items-center gap-2"
+                  >
                     <Compass className="h-4 w-4" />
                     Discovery
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Let your profile appear in nearby browsing when public and active
+                    Let your profile appear in nearby browsing when public and
+                    active
                   </p>
                 </div>
                 <Switch
@@ -271,7 +360,8 @@ export default function Settings() {
                 <Label htmlFor="acceptedContact">Accepted Contact</Label>
                 <Select
                   value={acceptedContactChannel}
-                  onValueChange={(value) => setAcceptedContactChannel(value as AcceptedContactChannel)}
+                  onValueChange={(value) =>
+                    setAcceptedContactChannel(value as AcceptedContactChannel)}
                 >
                   <SelectTrigger id="acceptedContact">
                     <SelectValue />
@@ -302,12 +392,51 @@ export default function Settings() {
                 Notifications
               </CardTitle>
               <CardDescription>
-                How you want to be notified
+                Connect Telegram to review invite requests from chat
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Coming soon - notification preferences
+            <CardContent className="space-y-4">
+              <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
+                <div className="flex items-start gap-2">
+                  <MessageSquare className="h-4 w-4 mt-0.5 text-primary" />
+                  <p>
+                    Linked hosts receive new invite notifications in Telegram
+                    and can accept or decline with inline buttons.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleCreateTelegramLink}
+                  disabled={creatingTelegramLink}
+                >
+                  {creatingTelegramLink && (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  )}
+                  Create Telegram link
+                </Button>
+
+                {telegramLinkUrl && (
+                  <a
+                    href={telegramLinkUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="sm:flex-1"
+                  >
+                    <Button type="button" className="w-full">
+                      Open Telegram
+                      <ExternalLink className="h-4 w-4 ml-2" />
+                    </Button>
+                  </a>
+                )}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                The link expires after 15 minutes and can only link this
+                signed-in account.
               </p>
             </CardContent>
           </Card>
@@ -317,10 +446,13 @@ export default function Settings() {
               <CardTitle className="text-destructive">Danger Zone</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button variant="destructive" onClick={() => {
-                signOut();
-                navigate('/');
-              }}>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  signOut();
+                  navigate("/");
+                }}
+              >
                 Sign Out
               </Button>
             </CardContent>

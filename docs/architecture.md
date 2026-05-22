@@ -27,12 +27,12 @@ flowchart LR
 | Component | Current role | Notes |
 |---|---|---|
 | Cloudflare Pages | Hosts the static Vite build from `dist` | Git-connected deploy from GitHub. No custom deploy command. |
-| React app | Runs UI, routing, Supabase client calls, and most current product behavior | Current app talks directly to Supabase from the browser. |
+| React app | Runs UI, routing, Supabase client calls, and most current product behavior | Public invite submission now uses `submit-invite`; some authenticated host/admin flows still talk directly to Supabase from the browser. |
 | Supabase Auth | Host signup/signin and browser session persistence | Current auth is email/password. |
 | Supabase Postgres | Profiles, schedules, slots, screening config, invitees, invites, dates, safety packs, catalogs | RLS is the primary security boundary. |
 | Supabase Storage | Profile avatar uploads | Uses the `avatars` bucket from the browser. |
-| Supabase Edge Functions | `telegram-webhook` is committed for visitor Telegram opt-in/discovery; `accept-invite` is committed for authenticated host decisions | Recommended for trusted server-side workflows. |
-| Telegram Bot | Visitor invite-update linking, discovery browsing, and accepted-invite notifications are implemented; host admin and safety menus are pending | Uses Telegram webhook secret validation and Supabase Function Secrets. |
+| Supabase Edge Functions | `telegram-webhook`, `create-telegram-link`, `submit-invite`, and `accept-invite` are committed for trusted backend workflows | Recommended for trusted server-side workflows. |
+| Telegram Bot | Visitor invite-update linking, discovery browsing, accepted-invite notifications, and host invite admin are implemented; safety menus are pending | Uses Telegram webhook secret validation and Supabase Function Secrets. |
 
 ## Current Data Flow
 
@@ -213,7 +213,7 @@ These rules describe the next implementation phase. See [User Journey Scenarios]
 |---|---|
 | Web invite submission | Visitor submits in the web app and must verify phone by SMS before `submit-invite` succeeds. |
 | SMS provider | Twilio is the MVP provider: Verify for OTP, Programmable Messaging for Safety Pack alerts. |
-| Mock phone verification | Current web wizard defaults to a test code unless `VITE_PHONE_VERIFICATION_MODE=twilio` is set; Twilio-backed verification is available through Edge Functions, but trusted submission still belongs server-side. |
+| Mock phone verification | Current web wizard defaults to a test code unless `VITE_PHONE_VERIFICATION_MODE=twilio` is set; `submit-invite` re-checks the mock code server-side so the browser cannot simply submit `phone_verified=true`. |
 | Telegram opt-in | Visitor is prompted to enable Telegram notifications after successful invite submission. Telegram is optional for the invite itself. |
 | Duplicate prevention | Enforce one active pending invite per verified phone per host. |
 | Host admin | Linked hosts receive new-invite notifications and can accept/reject in Telegram. |
@@ -230,9 +230,10 @@ Planned backend surface:
 | Function | Purpose |
 |---|---|
 | `telegram-webhook` | Receive Telegram updates, link accounts, process callback buttons, drive bot menus. |
+| `create-telegram-link` | Authenticated host endpoint that creates a short-lived Telegram `/start host_<token>` payload for account linking. Implemented. |
 | `send-phone-otp` | Send SMS OTP to visitor phone numbers through Twilio Verify. Implemented. |
 | `verify-phone-otp` | Verify Twilio OTP and issue a short-lived phone verification reference. Implemented. |
-| `submit-invite` | Validate public invite payload, phone verification, duplicate rule, screening, and create invite server-side. |
+| `submit-invite` | Validate public invite payload, phone verification, duplicate rule, and create invite server-side. Implemented; CAPTCHA, stronger date validation, one-time link consumption, and screening/moderation enforcement remain planned hardening. |
 | `accept-invite` | Transactionally accept invite, create date and Safety Pack draft, enqueue notifications. |
 | `decline-invite` | Transactionally decline invite and notify visitor when applicable. |
 | `set-profile-visibility` | Let web/bot enable or disable public profile and discovery visibility. |
@@ -244,6 +245,7 @@ Planned data changes:
 | Data area | Purpose |
 |---|---|
 | `telegram_connections` | Current table linking Telegram chat/user IDs to app users or invitees. Future migrations may split this into a stricter `telegram_accounts` model. |
+| `telegram_link_tokens` | Stores hashed, short-lived host Telegram linking tokens. Implemented by migration. |
 | `discovery_sessions` | Stores Telegram chat discovery context, current profile, pending invite profile, and mock phone verification state. |
 | `phone_verifications` | Store OTP challenges, verification status, expiry, and provider metadata. Implemented by migration. |
 | `notification_outbox` / `notification_deliveries` | Queue and audit Telegram/SMS notifications. |

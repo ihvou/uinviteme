@@ -48,16 +48,18 @@ Do not re-add `bun.lockb` unless the project intentionally moves back to Bun. Do
 - Treat RLS as the database security boundary.
 - Never expose service-role keys, Telegram bot tokens, SMS keys, payment keys, or CAPTCHA secret keys to the frontend.
 - Future secrets belong in Supabase Function Secrets or provider dashboards, not Vite env vars.
-- Public invite submission currently uses browser writes; hardening work belongs in [tasks.md](tasks.md).
+- Public invite submission uses `submit-invite`; remaining hardening work belongs in [tasks.md](tasks.md).
 
 ## Current Backend Shape
 
 Supabase Edge Functions are now part of the repo for trusted backend slices:
 
 - `supabase/functions/telegram-webhook` handles visitor Telegram opt-in, discovery browsing, inline slot callbacks, and the current mock Telegram phone gate.
+- `supabase/functions/create-telegram-link` creates short-lived host Telegram link tokens from authenticated Settings sessions.
 - `supabase/functions/accept-invite` handles authenticated host accept/decline decisions and visitor Telegram notifications.
+- `supabase/functions/submit-invite` handles public invite submission, server-side mock/Twilio phone verification checks, duplicate pending invite prevention, and invite creation.
 
-Public invite submission, real phone verification, and Safety Pack escalation still need to move from browser/database state into trusted Edge Functions.
+Real phone verification activation and Safety Pack escalation still need to move from browser/database state into trusted Edge Functions.
 
 When adding trusted backend behavior:
 
