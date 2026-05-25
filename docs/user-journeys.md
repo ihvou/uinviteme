@@ -10,7 +10,7 @@ This document captures the main success paths for the product actors and system.
 | Visitor / invitee | Request a date slot from a public invite page, verify phone by SMS, and optionally link Telegram for updates/discovery. |
 | Trusted contact | Receive emergency or missed-check-in SMS alerts. |
 | System | Enforce auth, privacy, RLS, workflow state, and notifications. |
-| Telegram bot | Future interaction surface for host administration, visitor accepted-invite notifications, discovery, and Safety Pack check-ins. |
+| Telegram bot | Interaction surface for host invite administration, visitor accepted-invite notifications, discovery, and future Safety Pack check-ins. |
 
 Status labels:
 
@@ -139,7 +139,7 @@ Current implementation covers steps 1-4 when the host accepts from the web app o
 
 ### Scenario 8: Host Administers Invites In Telegram
 
-Status: Implemented as Telegram admin MVP, except profile visibility controls from the bot are still planned.
+Status: Implemented as Telegram admin MVP.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
@@ -147,9 +147,9 @@ Status: Implemented as Telegram admin MVP, except profile visibility controls fr
 | 2 | System | New invite arrives. | Host gets Telegram message with invite summary and inline Accept/Decline buttons. |
 | 3 | Host | Taps Accept or Decline. | Bot callback reuses trusted `accept-invite` backend logic for both decisions. |
 | 4 | System | Updates invite lifecycle. | Pending invite is removed; accepted invite becomes a date; opted-in visitor is notified. |
-| 5 | Host | Uses bot menu to disable/enable invite page. | To be implemented: `public_profile_enabled` is updated and `/:handle` becomes hidden or visible. |
+| 5 | Host | Uses `/start`, `/settings`, `/admin`, or the post-link menu to toggle availability. | Bot updates `public_profile_enabled` and `discovery_enabled`; the web Settings page reflects the same state. |
 
-Success condition: a linked host can review and act on invites from Telegram without opening the web dashboard.
+Success condition: a linked host can review invites, accept/decline them, and quickly hide or show public/discovery availability from Telegram without opening the web dashboard.
 
 ### Scenario 9: Host Contact Sharing On Acceptance
 

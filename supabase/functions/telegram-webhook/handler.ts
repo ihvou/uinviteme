@@ -11,11 +11,13 @@ const SKIP_PROFILE_LABEL = "Skip";
 const CHANGE_CITY_LABEL = "Change city";
 const CANCEL_LABEL = "Cancel";
 const SHARE_PHONE_LABEL = "Share phone number";
+const HOST_SETTINGS_LABEL = "Host settings";
 const MOCK_PHONE_CODE = "123456";
 const PHONE_CODE_REGEX = /^\d{6}$/;
 const SLOT_CALLBACK_PREFIX = "slot:";
 const HOST_ACCEPT_CALLBACK_PREFIX = "host_accept:";
 const HOST_DECLINE_CALLBACK_PREFIX = "host_decline:";
+const HOST_VISIBILITY_CALLBACK_PREFIX = "host_visibility:";
 
 type Fetcher = typeof fetch;
 type TelegramParseMode = "HTML" | "MarkdownV2";
@@ -123,6 +125,14 @@ interface ProfileRecord {
   city_label: string | null;
   bio_one_liner: string | null;
   photo_url: string | null;
+}
+
+interface HostVisibilityProfileRecord {
+  id: string;
+  handle: string | null;
+  display_name: string | null;
+  public_profile_enabled: boolean | null;
+  discovery_enabled: boolean | null;
 }
 
 interface DiscoverySessionRecord {
@@ -353,6 +363,10 @@ export async function handleTelegramUpdate(
     return await startDiscovery(env, fetcher, chatId, username, handle);
   }
 
+  if (isHostSettingsText(text)) {
+    return await sendHostAdminMenuForChat(env, fetcher, chatId);
+  }
+
   if (text.toLowerCase() === SKIP_PROFILE_LABEL.toLowerCase()) {
     return await skipCurrentProfile(env, fetcher, chatId);
   }
@@ -396,6 +410,23 @@ export async function handleTelegramUpdate(
       username,
       command.token,
     );
+  }
+
+  if (command.action === "start") {
+    const connection = await getHostTelegramConnectionByChat(
+      env,
+      fetcher,
+      chatId,
+    );
+    if (connection?.user_id) {
+      return await sendHostAdminMenu(
+        env,
+        fetcher,
+        chatId,
+        connection.user_id,
+        "Welcome back. Your host controls are ready.",
+      );
+    }
   }
 
   await sendTelegramMessage(env, fetcher, chatId, defaultHelpText());
@@ -452,6 +483,22 @@ async function handleTelegramCallback(
       "declined",
     );
     await answerCallbackQuery(env, fetcher, callback.id, "Invite declined");
+    return result;
+  }
+
+  if (data?.startsWith(HOST_VISIBILITY_CALLBACK_PREFIX)) {
+    const result = await handleHostVisibilityCallback(
+      env,
+      fetcher,
+      chatId,
+      data.slice(HOST_VISIBILITY_CALLBACK_PREFIX.length),
+    );
+    await answerCallbackQuery(
+      env,
+      fetcher,
+      callback.id,
+      typeof result.message === "string" ? result.message : "Updated",
+    );
     return result;
   }
 
@@ -561,18 +608,168 @@ async function linkHostTelegram(
   });
   await markTelegramLinkTokenUsed(env, fetcher, linkToken.id);
 
-  await sendTelegramMessage(
+  await sendHostAdminMenu(
     env,
     fetcher,
     chatId,
+    linkToken.user_id,
     "Telegram admin is linked. I'll send new invite requests here with Accept and Decline buttons.",
-    removeKeyboard(),
   );
 
   return {
     ok: true,
     action: "host_linked",
     userId: linkToken.user_id,
+  };
+}
+
+async function sendHostAdminMenuForChat(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  chatId: string,
+) {
+  const connection = await getHostTelegramConnectionByChat(
+    env,
+    fetcher,
+    chatId,
+  );
+
+  if (!connection?.user_id) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "Link your host account from Settings before managing host controls here.",
+      removeKeyboard(),
+    );
+    return { ok: true, action: "host_not_linked" };
+  }
+
+  return await sendHostAdminMenu(
+    env,
+    fetcher,
+    chatId,
+    connection.user_id,
+    "Host settings",
+  );
+}
+
+async function sendHostAdminMenu(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  chatId: string,
+  userId: string,
+  intro: string,
+) {
+  const profile = await getHostVisibilityProfile(env, fetcher, userId);
+
+  if (!profile) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "I couldn't find your host profile. Please open Settings in the web app.",
+      removeKeyboard(),
+    );
+    return { ok: true, action: "host_profile_missing" };
+  }
+
+  await sendTelegramMessage(
+    env,
+    fetcher,
+    chatId,
+    formatHostSettingsText(env, profile, intro),
+    hostVisibilityKeyboard(profile),
+  );
+
+  return {
+    ok: true,
+    action: "host_settings",
+    publicProfileEnabled: profile.public_profile_enabled ?? true,
+    discoveryEnabled: profile.discovery_enabled ?? true,
+  };
+}
+
+async function handleHostVisibilityCallback(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  chatId: string,
+  payload: string,
+) {
+  const [target, state] = payload.split(":");
+  const enabled = state === "on" ? true : state === "off" ? false : null;
+  const field = target === "public"
+    ? "public_profile_enabled"
+    : target === "discovery"
+    ? "discovery_enabled"
+    : null;
+
+  if (!field || enabled === null) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "That host setting action is invalid. Open Host settings and try again.",
+      removeKeyboard(),
+    );
+    return { ok: true, action: "host_visibility_invalid" };
+  }
+
+  const connection = await getHostTelegramConnectionByChat(
+    env,
+    fetcher,
+    chatId,
+  );
+
+  if (!connection?.user_id) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "Link your host account from Settings before managing host controls here.",
+      removeKeyboard(),
+    );
+    return { ok: true, action: "host_not_linked" };
+  }
+
+  const profile = await getHostVisibilityProfile(
+    env,
+    fetcher,
+    connection.user_id,
+  );
+
+  if (!profile) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "I couldn't find your host profile. Please open Settings in the web app.",
+      removeKeyboard(),
+    );
+    return { ok: true, action: "host_profile_missing" };
+  }
+
+  await updateHostVisibilityProfile(env, fetcher, connection.user_id, {
+    [field]: enabled,
+  });
+
+  const updatedProfile = { ...profile, [field]: enabled };
+  const message = formatHostVisibilityCallbackMessage(field, enabled);
+
+  await sendTelegramMessage(
+    env,
+    fetcher,
+    chatId,
+    formatHostSettingsText(env, updatedProfile, message),
+    hostVisibilityKeyboard(updatedProfile),
+  );
+
+  return {
+    ok: true,
+    action: "host_visibility_updated",
+    field,
+    enabled,
+    message,
   };
 }
 
@@ -1592,6 +1789,45 @@ async function getHostTelegramConnectionByChat(
   return rows[0] ?? null;
 }
 
+async function getHostVisibilityProfile(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  userId: string,
+) {
+  const rows = await supabaseRest<HostVisibilityProfileRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/profiles?id=eq.${
+      encodeURIComponent(userId)
+    }&select=id,handle,display_name,public_profile_enabled,discovery_enabled&limit=1`,
+  );
+
+  return rows[0] ?? null;
+}
+
+async function updateHostVisibilityProfile(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  userId: string,
+  data: Partial<Pick<
+    HostVisibilityProfileRecord,
+    "public_profile_enabled" | "discovery_enabled"
+  >>,
+) {
+  await supabaseRest(
+    env,
+    fetcher,
+    `/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        ...data,
+        updated_at: new Date().toISOString(),
+      }),
+    },
+  );
+}
+
 function acceptInviteEnv(env: TelegramWebhookEnv): AcceptInviteEnv {
   return {
     supabaseUrl: env.supabaseUrl,
@@ -1941,6 +2177,71 @@ function phoneRequestKeyboard() {
   };
 }
 
+function hostVisibilityKeyboard(profile: HostVisibilityProfileRecord) {
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: profile.public_profile_enabled === false
+            ? "Public page: Off"
+            : "Public page: On",
+          callback_data: `${HOST_VISIBILITY_CALLBACK_PREFIX}public:${
+            profile.public_profile_enabled === false ? "on" : "off"
+          }`,
+        },
+      ],
+      [
+        {
+          text: profile.discovery_enabled === false
+            ? "Discovery: Off"
+            : "Discovery: On",
+          callback_data: `${HOST_VISIBILITY_CALLBACK_PREFIX}discovery:${
+            profile.discovery_enabled === false ? "on" : "off"
+          }`,
+        },
+      ],
+    ],
+  };
+}
+
+function formatHostSettingsText(
+  env: TelegramWebhookEnv,
+  profile: HostVisibilityProfileRecord,
+  intro: string,
+) {
+  const publicProfileEnabled = profile.public_profile_enabled !== false;
+  const discoveryEnabled = profile.discovery_enabled !== false;
+  const publicStatus = publicProfileEnabled ? "On" : "Off";
+  const discoveryStatus = discoveryEnabled ? "On" : "Off";
+  const publicUrl = profile.handle ? profileUrl(env, profile.handle) : null;
+  const lines = [
+    intro,
+    "",
+    `Public profile: ${publicStatus}`,
+    publicUrl && publicProfileEnabled ? `Public link: ${publicUrl}` : null,
+    `Discovery: ${discoveryStatus}`,
+    "",
+    "Tap a button below to toggle availability.",
+  ].filter(Boolean);
+
+  return lines.join("\n");
+}
+
+function formatHostVisibilityCallbackMessage(
+  field: "public_profile_enabled" | "discovery_enabled",
+  enabled: boolean,
+) {
+  if (field === "public_profile_enabled") {
+    return enabled
+      ? "Public profile is now visible."
+      : "Public profile is now hidden.";
+  }
+
+  return enabled
+    ? "Discovery is now enabled."
+    : "Discovery is now disabled.";
+}
+
 function removeKeyboard() {
   return { remove_keyboard: true };
 }
@@ -1958,6 +2259,13 @@ function parseCityMessage(text: string) {
 
 function isLikelyPhoneText(text: string) {
   return /^\+?[0-9][0-9\s().-]{6,}$/.test(text.trim());
+}
+
+function isHostSettingsText(text: string) {
+  const normalized = text.trim().toLowerCase();
+  return normalized === HOST_SETTINGS_LABEL.toLowerCase() ||
+    normalized === "/settings" ||
+    normalized === "/admin";
 }
 
 function normalizePhone(phone: string) {
@@ -2121,7 +2429,7 @@ function formatMarkdownQuote(value: string) {
 }
 
 function escapeMarkdown(value: string) {
-  return value.replace(/([\\_*\[\]()~`>#+\-=|{}.!])/g, "\\$1");
+  return value.replace(/([\\_*()[\]~`>#+\-=|{}.!])/g, "\\$1");
 }
 
 function escapeMarkdownUrl(value: string) {

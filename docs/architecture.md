@@ -163,18 +163,14 @@ Implemented:
 
 - `/start invite_updates_<invite>` links a visitor Telegram chat to the invitee for that submitted invite.
 - `/start discover_<handle>` starts visitor discovery from the origin profile city, shows one eligible public active discovery-enabled profile at a time, records view/skip/invite events, accepts manual `City: Singapore` context, accepts Telegram native location context, and gates the first Telegram-origin invite link behind mock phone verification.
+- `/start host_<token>` links a host chat, then `/start`, `/settings`, or `/admin` shows host controls for public profile visibility and discovery visibility.
 - `accept-invite` sends the visitor a Telegram message when the host accepts and the visitor linked Telegram.
 - `send-phone-otp` and `verify-phone-otp` provide Twilio Verify-backed phone verification primitives for the web invite wizard when `VITE_PHONE_VERIFICATION_MODE=twilio`.
 
 Next bot features:
 
-- `/start` and account linking for hosts.
-- Notify host when a new invite arrives.
-- Show pending invite summary.
-- Accept or decline with inline buttons.
 - Send date reminders.
 - Safety Pack check-in buttons.
-- Visitor accepted-invite notifications after the visitor opts into Telegram.
 - Production SMS OTP for Telegram phone verification and richer discovery ranking.
 
 The bot is not required for the first web invite submission. Visitor Telegram linking happens after invite submission or when the visitor chooses to browse nearby profiles.
@@ -216,7 +212,7 @@ These rules describe the next implementation phase. See [User Journey Scenarios]
 | Mock phone verification | Current web wizard defaults to a test code unless `VITE_PHONE_VERIFICATION_MODE=twilio` is set; `submit-invite` re-checks the mock code server-side so the browser cannot simply submit `phone_verified=true`. |
 | Telegram opt-in | Visitor is prompted to enable Telegram notifications after successful invite submission. Telegram is optional for the invite itself. |
 | Duplicate prevention | Enforce one active pending invite per verified phone per host. |
-| Host admin | Linked hosts receive new-invite notifications and can accept/reject in Telegram. |
+| Host admin | Linked hosts receive new-invite notifications, can accept/reject in Telegram, and can toggle public profile plus discovery visibility. |
 | Visitor accepted notification | Only visitors who opted into Telegram get accepted-invite notifications through the bot. |
 | Host contact sharing | Host chooses accepted-contact method, initially `telegram` or `instagram`. Host phone is not shared by default. |
 | Invite page visibility | `public_profile_enabled = false` hides the public profile entirely. |
@@ -229,14 +225,14 @@ Planned backend surface:
 
 | Function | Purpose |
 |---|---|
-| `telegram-webhook` | Receive Telegram updates, link accounts, process callback buttons, drive bot menus. |
+| `telegram-webhook` | Receive Telegram updates, link accounts, process callback buttons, drive visitor discovery and host admin menus. |
 | `create-telegram-link` | Authenticated host endpoint that creates a short-lived Telegram `/start host_<token>` payload for account linking. Implemented. |
 | `send-phone-otp` | Send SMS OTP to visitor phone numbers through Twilio Verify. Implemented. |
 | `verify-phone-otp` | Verify Twilio OTP and issue a short-lived phone verification reference. Implemented. |
 | `submit-invite` | Validate public invite payload, phone verification, duplicate rule, and create invite server-side. Implemented; CAPTCHA, stronger date validation, one-time link consumption, and screening/moderation enforcement remain planned hardening. |
 | `accept-invite` | Transactionally accept invite, create date and Safety Pack draft, enqueue notifications. |
 | `decline-invite` | Transactionally decline invite and notify visitor when applicable. |
-| `set-profile-visibility` | Let web/bot enable or disable public profile and discovery visibility. |
+| Host profile visibility | Implemented inside `telegram-webhook` host admin callbacks and web Settings; a separate function is not currently required. |
 | `safety-checkin-reminder` | Scheduled reminder and missed-check-in processor. |
 | `safety-alert` | Send trusted-contact SMS for emergency or missed check-in through Twilio Messaging. |
 

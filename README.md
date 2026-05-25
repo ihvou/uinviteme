@@ -144,7 +144,7 @@ Committed functions:
 
 | Function | Purpose | Status |
 |---|---|---|
-| `telegram-webhook` | Receives Telegram bot updates, verifies Telegram's webhook secret header, links `/start invite_updates_<invite>` chats to invitees, and runs visitor discovery browsing from `/start discover_<handle>`. | Local code and tests are in repo; deployed manually from CLI. |
+| `telegram-webhook` | Receives Telegram bot updates, verifies Telegram's webhook secret header, links `/start invite_updates_<invite>` chats to invitees, runs visitor discovery from `/start discover_<handle>`, and lets linked hosts accept/decline invites plus toggle public/discovery availability. | Local code and tests are in repo; deployed manually from CLI. |
 | `create-telegram-link` | Authenticated host endpoint that creates a short-lived Telegram host-link payload for Settings. | Local code and tests are in repo; deploy with default JWT verification. |
 | `accept-invite` | Authenticated host endpoint that accepts/declines invites, creates the date on accept, and notifies a Telegram-linked visitor. | Local code and tests are in repo; deployed manually from CLI with default JWT verification. |
 | `submit-invite` | Public invite submission endpoint that validates schedule/slot/link, server-checks mock or Twilio phone verification, blocks duplicate pending invites, and creates invitee + invite records with the service role key. | Local code and tests are in repo; deploy before applying the direct-browser-write RLS cleanup migration. |

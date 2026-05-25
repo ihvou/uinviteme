@@ -119,6 +119,80 @@ Deno.test("handleTelegramUpdate links host Telegram admin", async () => {
   if (!telegramBody.text.includes("Telegram admin is linked")) {
     throw new Error("host link confirmation was not sent");
   }
+  if (
+    telegramBody.reply_markup?.inline_keyboard?.[0]?.[0]?.callback_data !==
+      "host_visibility:public:off"
+  ) {
+    throw new Error("host link confirmation did not include public toggle");
+  }
+});
+
+Deno.test("handleTelegramUpdate lets linked host manage visibility", async () => {
+  const mock = createMockFetcher();
+  mock.telegramConnections.push({
+    user_id: ORIGIN_ID,
+    telegram_chat_id: CHAT_ID,
+    telegram_username: "HostUser",
+    is_active: true,
+  });
+
+  const settingsResult = await handleTelegramUpdate(
+    {
+      message: {
+        text: "/settings",
+        chat: { id: CHAT_ID },
+        from: { username: "HostUser" },
+      },
+    },
+    env(),
+    mock.fetcher as typeof fetch,
+  );
+
+  if (settingsResult.action !== "host_settings") {
+    throw new Error(`unexpected settings result: ${settingsResult.action}`);
+  }
+
+  let telegramBody = mock.lastTelegramBody();
+  if (!telegramBody.text.includes("Public profile: On")) {
+    throw new Error("host settings did not show public profile status");
+  }
+
+  const toggleResult = await handleTelegramUpdate(
+    {
+      callback_query: {
+        id: "callback-host-visibility",
+        data: "host_visibility:public:off",
+        from: { username: "HostUser" },
+        message: { chat: { id: CHAT_ID } },
+      },
+    },
+    env(),
+    mock.fetcher as typeof fetch,
+  );
+
+  if (
+    toggleResult.action !== "host_visibility_updated" ||
+    toggleResult.field !== "public_profile_enabled" ||
+    toggleResult.enabled !== false
+  ) {
+    throw new Error(`unexpected toggle result: ${JSON.stringify(toggleResult)}`);
+  }
+
+  const profilePatch = mock.profileUpdates.at(-1);
+  if (profilePatch?.public_profile_enabled !== false) {
+    throw new Error("public profile toggle was not persisted");
+  }
+
+  telegramBody = mock.lastTelegramBody();
+  if (!telegramBody.text.includes("Public profile is now hidden.")) {
+    throw new Error("host visibility confirmation was not sent");
+  }
+  if (
+    telegramBody.reply_markup?.inline_keyboard?.[0]?.[0]?.callback_data !==
+      "host_visibility:public:on"
+  ) {
+    throw new Error("host visibility keyboard did not flip public toggle");
+  }
 });
 
 Deno.test("handleTelegramUpdate lets linked host accept invite", async () => {
@@ -425,6 +499,7 @@ function createMockFetcher() {
   const discoverySessions: Array<Record<string, unknown>> = [];
   const discoveryEvents: Array<Record<string, unknown>> = [];
   const telegramConnections: Array<Record<string, unknown>> = [];
+  const profileUpdates: Array<Record<string, unknown>> = [];
   let telegramLinkTokenUsed = false;
 
   const fetcher = async (url: string | URL | Request, init?: RequestInit) => {
@@ -670,6 +745,11 @@ function createMockFetcher() {
     }
 
     if (normalizedUrl.includes("/rest/v1/profiles")) {
+      if (init?.method === "PATCH") {
+        profileUpdates.push(JSON.parse(init.body?.toString() || "{}"));
+        return json({});
+      }
+
       if (normalizedUrl.includes("handle=eq.codex96910493")) {
         return json([
           profile(ORIGIN_ID, "codex96910493", "Codex Canonical Smoke"),
@@ -721,6 +801,7 @@ function createMockFetcher() {
     discoverySessions,
     discoveryEvents,
     telegramConnections,
+    profileUpdates,
     get telegramLinkTokenUsed() {
       return telegramLinkTokenUsed;
     },
@@ -748,6 +829,8 @@ function profile(
     city_label: "Singapore",
     bio_one_liner: `${displayName} bio`,
     photo_url: `https://images.example/${handle}.jpg`,
+    public_profile_enabled: true,
+    discovery_enabled: true,
   };
 }
 

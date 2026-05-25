@@ -56,7 +56,7 @@ Do not re-add `bun.lockb` unless the project intentionally moves back to Bun. Do
 
 Supabase Edge Functions are now part of the repo for trusted backend slices:
 
-- `supabase/functions/telegram-webhook` handles visitor Telegram opt-in, discovery browsing, inline slot callbacks, and the current mock Telegram phone gate.
+- `supabase/functions/telegram-webhook` handles visitor Telegram opt-in, discovery browsing, inline slot callbacks, host invite admin, host public/discovery visibility toggles, and the current mock Telegram phone gate.
 - `supabase/functions/create-telegram-link` creates short-lived host Telegram link tokens from authenticated Settings sessions.
 - `supabase/functions/accept-invite` handles authenticated host accept/decline decisions and visitor Telegram notifications.
 - `supabase/functions/submit-invite` handles public invite submission, server-side mock/Twilio phone verification checks, duplicate pending invite prevention, and invite creation.
@@ -106,4 +106,4 @@ The highest priority gaps are tracked in [tasks.md](tasks.md). In short:
 - Add CAPTCHA/rate limiting.
 - Clean env handling.
 - Continue moving trusted backend workflows into Supabase Edge Functions.
-- Continue Telegram work beyond the implemented visitor discovery MVP: host administration, Twilio-backed visitor phone verification, Safety Pack check-ins, and trusted-contact escalation by SMS.
+- Continue Telegram work beyond the implemented visitor discovery and host administration MVPs: Twilio-backed visitor phone verification, Safety Pack check-ins, and trusted-contact escalation by SMS.
