@@ -27,9 +27,10 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  const { signUp, signIn, user, loading: authLoading } = useAuth();
+  const { signUp, signIn, signInWithGoogle, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -118,6 +119,30 @@ export default function Auth() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setErrors({});
+
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Google sign in failed',
+          description: error.message,
+        });
+      }
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-subtle">
@@ -146,7 +171,35 @@ export default function Auth() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleGoogleSignIn}
+                disabled={loading || googleLoading}
+              >
+                {googleLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <span className="mr-2 flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-semibold">
+                    G
+                  </span>
+                )}
+                Continue with Google
+              </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">or</span>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               {isSignUp && (
                 <div className="space-y-2">
                   <Label htmlFor="displayName">Display Name</Label>

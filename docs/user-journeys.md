@@ -24,7 +24,7 @@ Status: Implemented, with token-link caveat still tracked in tasks.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
-| 1 | Host | Opens `/auth?mode=signup` and creates an account. | Supabase Auth creates a user and profile trigger creates a profile row. |
+| 1 | Host | Opens `/auth?mode=signup` and creates an account with email/password or Google. | Supabase Auth creates a user and profile trigger creates a profile row with OAuth name/photo metadata when available. |
 | 2 | Host | Opens Settings and adds display name, handle, city, bio, and public profile toggle. | Profile becomes discoverable at `/:handle`. |
 | 3 | Host | Opens Schedule and adds an availability slot. | Slot is stored under the host schedule. |
 | 4 | Host | Activates schedule. | Public invite page can show the next matching slot dates. |

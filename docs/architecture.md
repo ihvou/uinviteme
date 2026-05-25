@@ -28,7 +28,7 @@ flowchart LR
 |---|---|---|
 | Cloudflare Pages | Hosts the static Vite build from `dist` | Git-connected deploy from GitHub. No custom deploy command. |
 | React app | Runs UI, routing, Supabase client calls, and most current product behavior | Public invite submission now uses `submit-invite`; some authenticated host/admin flows still talk directly to Supabase from the browser. |
-| Supabase Auth | Host signup/signin and browser session persistence | Current auth is email/password. |
+| Supabase Auth | Host signup/signin and browser session persistence | Host auth supports email/password and Google OAuth. Visitors remain accountless. |
 | Supabase Postgres | Profiles, schedules, slots, screening config, invitees, invites, dates, safety packs, catalogs | RLS is the primary security boundary. |
 | Supabase Storage | Profile avatar uploads | Uses the `avatars` bucket from the browser. |
 | Supabase Edge Functions | `telegram-webhook`, `create-telegram-link`, `submit-invite`, and `accept-invite` are committed for trusted backend workflows | Recommended for trusted server-side workflows. |
@@ -43,7 +43,7 @@ sequenceDiagram
   participant UI as React app
   participant SB as Supabase
 
-  H->>UI: Sign up/sign in
+  H->>UI: Sign up/sign in with email or Google
   UI->>SB: Supabase Auth
   H->>UI: Configure profile, schedule, screening
   UI->>SB: Browser writes profile/schedule/config

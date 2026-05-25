@@ -14,6 +14,8 @@ Primary product loop:
 4. Accepted invite becomes a Date.
 5. Host can activate a Safety Pack.
 
+Host auth supports email/password and Google OAuth through Supabase Auth. Visitors do not need accounts for invite submission.
+
 ## Commands
 
 Use npm, not Bun:

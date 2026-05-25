@@ -9,6 +9,8 @@ The app was originally generated in Lovable, but the current runtime is independ
 - Backend: Supabase Auth, Postgres, Storage, and Supabase Edge Functions
 - Production URL: <https://uinvite.me/>
 
+Host authentication supports Supabase email/password and Google OAuth. Visitor invite submission remains accountless and uses phone verification instead of auth.
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
@@ -89,6 +91,41 @@ TWILIO_MESSAGING_SERVICE_SID=
 ```
 
 Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions. Never add `TELEGRAM_BOT_TOKEN`, Twilio secrets, or the service-role key to a `VITE_` variable.
+
+## Google Auth
+
+Google OAuth is configured in provider dashboards, not through Cloudflare env vars.
+
+Google Cloud OAuth client:
+
+```txt
+Application type: Web application
+Authorized JavaScript origins:
+https://uinvite.me
+https://uinviteme.pages.dev
+http://localhost:5173
+
+Authorized redirect URI:
+https://vvjgrvltnnqoiijoufry.supabase.co/auth/v1/callback
+```
+
+Supabase Dashboard:
+
+```txt
+Authentication > Providers > Google: enabled
+Client ID: from Google Cloud
+Client Secret: from Google Cloud
+
+Authentication > URL Configuration > Site URL:
+https://uinvite.me
+
+Authentication > URL Configuration > Redirect URLs:
+https://uinvite.me/**
+https://uinviteme.pages.dev/**
+http://localhost:5173/**
+```
+
+The `handle_new_user()` trigger reads Google `full_name`, `name`, `avatar_url`, and `picture` metadata when creating profile rows.
 
 ## Supabase Edge Functions
 
