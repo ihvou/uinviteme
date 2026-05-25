@@ -19,20 +19,20 @@ interface InviteLinkCardProps {
 
 const LINK_ICONS: Record<LinkType, React.ElementType> = {
   one_time: Zap,
-  '3_day': Clock,
-  '7_day': Calendar,
+  exp_3d: Clock,
+  exp_7d: Calendar,
 };
 
 const LINK_LABELS: Record<LinkType, string> = {
   one_time: 'One-time link',
-  '3_day': '3-day link',
-  '7_day': '7-day link',
+  exp_3d: '3-day link',
+  exp_7d: '7-day link',
 };
 
 const LINK_DESCRIPTIONS: Record<LinkType, string> = {
   one_time: 'Consumed after one successful invite',
-  '3_day': 'Valid for 3 days, multiple uses',
-  '7_day': 'Valid for 7 days, multiple uses',
+  exp_3d: 'Valid for 3 days, multiple uses',
+  exp_7d: 'Valid for 7 days, multiple uses',
 };
 
 export function InviteLinkCard({ 
@@ -41,7 +41,7 @@ export function InviteLinkCard({
   publicProfileEnabled = true,
   onTogglePublicProfile 
 }: InviteLinkCardProps) {
-  const { links, loading, refreshLink, getInviteUrl, getPublicProfileUrl } = useInviteLinks(scheduleId);
+  const { links, loading, error, refreshLink, getInviteUrl, getPublicProfileUrl } = useInviteLinks(scheduleId);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<LinkType | null>(null);
   const [showOtherLinks, setShowOtherLinks] = useState(false);
@@ -145,7 +145,13 @@ export function InviteLinkCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* 7-day link as main */}
-        {renderLinkRow('7_day')}
+        {renderLinkRow('exp_7d')}
+
+        {error && (
+          <p className="text-xs text-destructive">
+            Link generation needs attention: {error}
+          </p>
+        )}
 
         {/* Other links collapsed */}
         <Collapsible open={showOtherLinks} onOpenChange={setShowOtherLinks}>
@@ -156,7 +162,7 @@ export function InviteLinkCard({
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-4 pt-4">
-            {renderLinkRow('3_day')}
+            {renderLinkRow('exp_3d')}
             {renderLinkRow('one_time')}
           </CollapsibleContent>
         </Collapsible>

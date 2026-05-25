@@ -4,19 +4,19 @@ import { Tables } from '@/integrations/supabase/types';
 
 export type InviteLink = Tables<'invite_links'>;
 
-export type LinkType = 'one_time' | '3_day' | '7_day';
+export type LinkType = 'one_time' | 'exp_3d' | 'exp_7d';
 
 const LINK_CONFIGS: Record<LinkType, { label: string; expiresInDays: number | null; singleUse: boolean }> = {
   one_time: { label: 'One-time link', expiresInDays: null, singleUse: true },
-  '3_day': { label: '3-day link', expiresInDays: 3, singleUse: false },
-  '7_day': { label: '7-day link', expiresInDays: 7, singleUse: false },
+  exp_3d: { label: '3-day link', expiresInDays: 3, singleUse: false },
+  exp_7d: { label: '7-day link', expiresInDays: 7, singleUse: false },
 };
 
 export function useInviteLinks(scheduleId: string | null) {
   const [links, setLinks] = useState<Record<LinkType, InviteLink | null>>({
     one_time: null,
-    '3_day': null,
-    '7_day': null,
+    exp_3d: null,
+    exp_7d: null,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +30,7 @@ export function useInviteLinks(scheduleId: string | null) {
   const createLink = useCallback(async (linkType: LinkType) => {
     if (!scheduleId) return { error: 'No schedule found' };
 
+    setError(null);
     const config = LINK_CONFIGS[linkType];
     const token = generateToken();
     const expiresAt = config.expiresInDays
@@ -77,6 +78,7 @@ export function useInviteLinks(scheduleId: string | null) {
     }
 
     setLoading(true);
+    setError(null);
 
     // Fetch existing active links grouped by type
     const { data: existingLinks, error: fetchError } = await supabase
@@ -95,13 +97,14 @@ export function useInviteLinks(scheduleId: string | null) {
     const now = new Date();
     const linksByType: Record<LinkType, InviteLink | null> = {
       one_time: null,
-      '3_day': null,
-      '7_day': null,
+      exp_3d: null,
+      exp_7d: null,
     };
 
     // Find active links for each type
     for (const link of existingLinks || []) {
-      const linkType = link.type as LinkType;
+      const linkType = normalizeLinkType(link.type);
+      if (!linkType) continue;
       if (!linksByType[linkType]) {
         // Check if link is still valid (not expired)
         if (!link.expires_at || new Date(link.expires_at) > now) {
@@ -111,7 +114,7 @@ export function useInviteLinks(scheduleId: string | null) {
     }
 
     // Create missing links
-    const linkTypes: LinkType[] = ['one_time', '3_day', '7_day'];
+    const linkTypes: LinkType[] = ['one_time', 'exp_3d', 'exp_7d'];
     for (const linkType of linkTypes) {
       if (!linksByType[linkType]) {
         const config = LINK_CONFIGS[linkType];
@@ -120,7 +123,7 @@ export function useInviteLinks(scheduleId: string | null) {
           ? new Date(Date.now() + config.expiresInDays * 24 * 60 * 60 * 1000).toISOString()
           : null;
 
-        const { data } = await supabase
+        const { data, error: insertError } = await supabase
           .from('invite_links')
           .insert({
             schedule_id: scheduleId,
@@ -130,6 +133,11 @@ export function useInviteLinks(scheduleId: string | null) {
           })
           .select()
           .single();
+
+        if (insertError) {
+          setError(insertError.message);
+          continue;
+        }
 
         if (data) {
           linksByType[linkType] = data;
@@ -163,4 +171,15 @@ export function useInviteLinks(scheduleId: string | null) {
     getPublicProfileUrl,
     LINK_CONFIGS,
   };
+}
+
+function normalizeLinkType(type: string | null): LinkType | null {
+  if (type === 'one_time' || type === 'exp_3d' || type === 'exp_7d') {
+    return type;
+  }
+
+  if (type === '3_day') return 'exp_3d';
+  if (type === '7_day') return 'exp_7d';
+
+  return null;
 }

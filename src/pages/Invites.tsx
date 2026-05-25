@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
+import { HostTelegramConnectCard } from '@/components/settings/HostTelegramConnectCard';
 
 type Invite = Tables<'invites'>;
 type Invitee = Tables<'invitees'>;
@@ -140,6 +141,10 @@ export default function Invites() {
           <p className="text-muted-foreground">
             Review and respond to people who want to meet you
           </p>
+        </div>
+
+        <div className="mb-6">
+          <HostTelegramConnectCard description="Connect Telegram to get new invite requests here and in chat" />
         </div>
 
         {invites.length > 0 ? (
