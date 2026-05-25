@@ -181,7 +181,7 @@ Success condition: host receives Telegram check-in, and trusted contact receives
 
 ### Scenario 11: Visitor Browses Nearby Profiles In Telegram
 
-Status: Implemented as a Telegram MVP with profile photos, readable cards, inline slot selection, and mock phone verification. Real Twilio-backed OTP is to be implemented.
+Status: Implemented as a Telegram MVP with profile photos, readable cards, inline slot selection, and Twilio-backed phone verification.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
@@ -190,13 +190,13 @@ Status: Implemented as a Telegram MVP with profile photos, readable cards, inlin
 | 3 | Visitor | Optionally shares Telegram native location or sends city manually. | Bot updates discovery location and ranking context. |
 | 4 | Bot | Shows one profile at a time. | Only public, active, discovery-enabled profiles are eligible. |
 | 5 | Visitor | Taps Invite or Skip. | Invite opens the web invite flow; Skip records discovery event and shows next profile. |
-| 6 | Visitor | First invites from Telegram discovery before phone validation. | Current MVP: bot runs mock phone verification in Telegram before sending the selected invite page link. Future: bot verifies through Twilio before sending the link. |
+| 6 | Visitor | First invites from Telegram discovery before phone validation. | Bot sends a Twilio Verify SMS, checks the reply code, and only then sends the selected invite page link. |
 
 Success condition: visitor can browse public active profiles one by one in Telegram, with invite actions returning to the web flow.
 
 Important rule: discovery can start before phone verification, but the first Telegram-origin invite link is gated until that visitor verifies a phone number in Telegram.
 
-Current caveat: Telegram phone verification uses test code `123456`; production still needs Twilio-backed SMS OTP and the future server-side `submit-invite` function to trust the verification end to end.
+Current caveat: Telegram still hands the verified visitor back to the web invite flow by URL; future work should connect Telegram-origin invite creation to the trusted `submit-invite` flow end to end.
 
 Discovery eligibility:
 

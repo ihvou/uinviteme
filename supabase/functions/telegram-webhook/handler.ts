@@ -1,4 +1,9 @@
 import { acceptInvite, AcceptInviteEnv } from "../accept-invite/handler.ts";
+import { sendPhoneOtp, SendPhoneOtpEnv } from "../send-phone-otp/handler.ts";
+import {
+  verifyPhoneOtp,
+  VerifyPhoneOtpEnv,
+} from "../verify-phone-otp/handler.ts";
 import { hashTelegramLinkToken } from "../_shared/telegramLinkToken.ts";
 
 const TELEGRAM_SECRET_HEADER = "x-telegram-bot-api-secret-token";
@@ -12,8 +17,7 @@ const CHANGE_CITY_LABEL = "Change city";
 const CANCEL_LABEL = "Cancel";
 const SHARE_PHONE_LABEL = "Share phone number";
 const HOST_SETTINGS_LABEL = "Host settings";
-const MOCK_PHONE_CODE = "123456";
-const PHONE_CODE_REGEX = /^\d{6}$/;
+const PHONE_CODE_REGEX = /^\d{4,10}$/;
 const SLOT_CALLBACK_PREFIX = "slot:";
 const HOST_ACCEPT_CALLBACK_PREFIX = "host_accept:";
 const HOST_DECLINE_CALLBACK_PREFIX = "host_decline:";
@@ -22,7 +26,8 @@ const HOST_VISIBILITY_CALLBACK_PREFIX = "host_visibility:";
 type Fetcher = typeof fetch;
 type TelegramParseMode = "HTML" | "MarkdownV2";
 
-export interface TelegramWebhookEnv {
+export interface TelegramWebhookEnv
+  extends SendPhoneOtpEnv, VerifyPhoneOtpEnv {
   supabaseUrl: string;
   supabaseServiceRoleKey: string;
   telegramBotToken: string;
@@ -1120,7 +1125,7 @@ async function handleInviteSlotSelection(
     chatId,
     `Before inviting to ${
       formatSlotOption(selected)
-    }, verify your phone number. Tap "${SHARE_PHONE_LABEL}" or send your number here. Test SMS code: ${MOCK_PHONE_CODE}.`,
+    }, verify your phone number. Tap "${SHARE_PHONE_LABEL}" or send your number here. I'll text you a verification code.`,
     phoneRequestKeyboard(),
   );
 
@@ -1140,7 +1145,6 @@ async function handlePhoneNumberMessage(
   phoneNumber: string,
 ) {
   const session = await getDiscoverySession(env, fetcher, chatId);
-  const normalizedPhone = normalizePhone(phoneNumber);
 
   if (!session?.pending_profile_id || !session.pending_profile_handle) {
     await sendTelegramMessage(
@@ -1153,22 +1157,59 @@ async function handlePhoneNumberMessage(
     return { ok: true, action: "phone_without_pending_invite" };
   }
 
+  const phoneForVerification = normalizePhone(phoneNumber);
+  const pendingTarget = parsePendingInviteTarget(session.pending_profile_handle);
+  let otp: Awaited<ReturnType<typeof sendPhoneOtp>>;
+  try {
+    otp = await sendPhoneOtp(
+      {
+        phone: phoneForVerification,
+        purpose: "telegram_discovery",
+        metadata: {
+          telegramChatId: chatId,
+          telegramUsername: username ?? session.telegram_username ?? null,
+          profileId: session.pending_profile_id,
+          profileHandle: pendingTarget.handle,
+          slotId: pendingTarget.slotId,
+        },
+      },
+      env,
+      fetcher,
+    );
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : "Phone verification could not be started";
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      `I couldn't send a verification code: ${message}`,
+      phoneRequestKeyboard(),
+    );
+    return { ok: true, action: "phone_code_send_failed", error: message };
+  }
+
   await saveDiscoverySession(env, fetcher, chatId, {
     telegram_username: username ?? session.telegram_username,
-    phone_e164: normalizedPhone,
+    phone_e164: phoneForVerification,
     phone_verified: false,
-    phone_verification_code: MOCK_PHONE_CODE,
+    phone_verification_code: otp.verificationId,
   });
 
   await sendTelegramMessage(
     env,
     fetcher,
     chatId,
-    `Mock SMS sent to ${normalizedPhone}. Reply with ${MOCK_PHONE_CODE} to verify.`,
+    `SMS sent to ${otp.phoneE164}. Reply with the code to verify.`,
     removeKeyboard(),
   );
 
-  return { ok: true, action: "phone_code_sent" };
+  return {
+    ok: true,
+    action: "phone_code_sent",
+    verificationId: otp.verificationId,
+  };
 }
 
 async function handlePhoneCodeMessage(
@@ -1178,14 +1219,40 @@ async function handlePhoneCodeMessage(
   session: DiscoverySessionRecord,
   code: string,
 ) {
-  if (code !== session.phone_verification_code) {
+  if (!session.phone_verification_code || !session.phone_e164) {
     await sendTelegramMessage(
       env,
       fetcher,
       chatId,
-      `That code did not match. Reply with ${MOCK_PHONE_CODE} for this test build.`,
+      `Send your phone number first so I can text you a verification code.`,
+      phoneRequestKeyboard(),
     );
-    return { ok: true, action: "phone_code_invalid" };
+    return { ok: true, action: "phone_code_without_challenge" };
+  }
+
+  try {
+    await verifyPhoneOtp(
+      {
+        verificationId: session.phone_verification_code,
+        phone: session.phone_e164,
+        code,
+      },
+      env,
+      fetcher,
+    );
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : "Verification failed";
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      message === "Invalid verification code"
+        ? "That code did not match. Please check the SMS and try again."
+        : `I couldn't verify that code: ${message}`,
+    );
+    return { ok: true, action: "phone_code_invalid", error: message };
   }
 
   await saveDiscoverySession(env, fetcher, chatId, {
@@ -1386,6 +1453,11 @@ function readEnv(): TelegramWebhookEnv {
   const telegramApiBaseUrl = Deno.env.get("TELEGRAM_API_BASE_URL") ||
     "https://api.telegram.org";
   const publicSiteUrl = Deno.env.get("PUBLIC_SITE_URL") || "https://uinvite.me";
+  const twilioAccountSid = requiredEnv("TWILIO_ACCOUNT_SID");
+  const twilioAuthToken = requiredEnv("TWILIO_AUTH_TOKEN");
+  const twilioVerifyServiceSid = requiredEnv("TWILIO_VERIFY_SERVICE_SID");
+  const twilioVerifyApiBaseUrl = Deno.env.get("TWILIO_VERIFY_API_BASE_URL") ||
+    "https://verify.twilio.com/v2";
 
   return {
     supabaseUrl,
@@ -1394,6 +1466,10 @@ function readEnv(): TelegramWebhookEnv {
     telegramWebhookSecret,
     telegramApiBaseUrl,
     publicSiteUrl,
+    twilioAccountSid,
+    twilioAuthToken,
+    twilioVerifyServiceSid,
+    twilioVerifyApiBaseUrl,
   };
 }
 

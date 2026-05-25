@@ -329,7 +329,7 @@ Deno.test("handleTelegramUpdate skips current profile and shows the next one", a
   }
 });
 
-Deno.test("handleTelegramUpdate gates Telegram-origin invite with mock phone verification", async () => {
+Deno.test("handleTelegramUpdate gates Telegram-origin invite with Twilio phone verification", async () => {
   const mock = createMockFetcher();
   mock.discoverySessions.push({
     telegram_chat_id: CHAT_ID,
@@ -420,10 +420,22 @@ Deno.test("handleTelegramUpdate gates Telegram-origin invite with mock phone ver
     );
   }
 
+  const twilioStart = mock.calls.find((call) =>
+    call.url.includes("/Services/VA123/Verifications")
+  );
+  if (!twilioStart?.init?.body) {
+    throw new Error("Telegram phone flow did not start Twilio Verify");
+  }
+
+  const twilioStartBody = twilioStart.init.body as URLSearchParams;
+  if (twilioStartBody.get("To") !== "+6591234567") {
+    throw new Error("Telegram phone was not normalized for Twilio");
+  }
+
   const codeResult = await handleTelegramUpdate(
     {
       message: {
-        text: "123456",
+        text: "654321",
         chat: { id: CHAT_ID },
         from: { username: "VisitorUser" },
       },
@@ -437,6 +449,21 @@ Deno.test("handleTelegramUpdate gates Telegram-origin invite with mock phone ver
     codeResult.slotId !== "slot-maya-1"
   ) {
     throw new Error(`unexpected code result: ${JSON.stringify(codeResult)}`);
+  }
+
+  const twilioCheck = mock.calls.find((call) =>
+    call.url.includes("/Services/VA123/VerificationCheck")
+  );
+  if (!twilioCheck?.init?.body) {
+    throw new Error("Telegram phone flow did not check Twilio Verify");
+  }
+
+  const twilioCheckBody = twilioCheck.init.body as URLSearchParams;
+  if (
+    twilioCheckBody.get("To") !== "+6591234567" ||
+    twilioCheckBody.get("Code") !== "654321"
+  ) {
+    throw new Error("Telegram verification check body was incorrect");
   }
 
   telegramBody = mock.lastTelegramBody();
@@ -491,6 +518,10 @@ function env(): TelegramWebhookEnv {
     telegramWebhookSecret: "webhook-secret",
     telegramApiBaseUrl: "https://telegram.example",
     publicSiteUrl: "https://uinvite.me",
+    twilioAccountSid: "AC123",
+    twilioAuthToken: "auth-token",
+    twilioVerifyServiceSid: "VA123",
+    twilioVerifyApiBaseUrl: "https://verify.example/v2",
   };
 }
 
@@ -500,6 +531,7 @@ function createMockFetcher() {
   const discoveryEvents: Array<Record<string, unknown>> = [];
   const telegramConnections: Array<Record<string, unknown>> = [];
   const profileUpdates: Array<Record<string, unknown>> = [];
+  const phoneVerifications: Array<Record<string, unknown>> = [];
   let telegramLinkTokenUsed = false;
 
   const fetcher = async (url: string | URL | Request, init?: RequestInit) => {
@@ -544,6 +576,51 @@ function createMockFetcher() {
           .filter((row) => row.telegram_chat_id === chatId)
           .map((row) => ({ profile_user_id: row.profile_user_id })),
       );
+    }
+
+    if (normalizedUrl.endsWith("/rest/v1/phone_verifications")) {
+      if (init?.method === "POST") {
+        phoneVerifications.push(JSON.parse(init.body?.toString() || "{}"));
+        return json({});
+      }
+    }
+
+    if (normalizedUrl.includes("/rest/v1/phone_verifications?id=eq.")) {
+      if (init?.method === "PATCH") return json({});
+
+      const verificationId = extractEq(normalizedUrl, "id");
+      const verification = phoneVerifications.find((row) =>
+        row.id === verificationId
+      );
+      return json(verification
+        ? [{
+          id: verification.id,
+          phone_e164: verification.phone_e164,
+          status: verification.status,
+          attempt_count: verification.attempt_count ?? 0,
+          expires_at: verification.expires_at,
+        }]
+        : []);
+    }
+
+    if (normalizedUrl.includes("/Services/VA123/Verifications")) {
+      return json({
+        sid: "VE123",
+        status: "pending",
+        to: "+6591234567",
+        channel: "sms",
+      });
+    }
+
+    if (normalizedUrl.includes("/Services/VA123/VerificationCheck")) {
+      const body = init?.body as URLSearchParams | undefined;
+      const approved = body?.get("Code") === "654321";
+      return json({
+        sid: "VE123",
+        status: approved ? "approved" : "pending",
+        valid: approved,
+        to: body?.get("To") ?? "+6591234567",
+      });
     }
 
     if (normalizedUrl.includes("/rest/v1/telegram_link_tokens")) {
@@ -802,6 +879,7 @@ function createMockFetcher() {
     discoveryEvents,
     telegramConnections,
     profileUpdates,
+    phoneVerifications,
     get telegramLinkTokenUsed() {
       return telegramLinkTokenUsed;
     },

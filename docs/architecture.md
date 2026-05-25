@@ -162,7 +162,7 @@ sequenceDiagram
 Implemented:
 
 - `/start invite_updates_<invite>` links a visitor Telegram chat to the invitee for that submitted invite.
-- `/start discover_<handle>` starts visitor discovery from the origin profile city, shows one eligible public active discovery-enabled profile at a time, records view/skip/invite events, accepts manual `City: Singapore` context, accepts Telegram native location context, and gates the first Telegram-origin invite link behind mock phone verification.
+- `/start discover_<handle>` starts visitor discovery from the origin profile city, shows one eligible public active discovery-enabled profile at a time, records view/skip/invite events, accepts manual `City: Singapore` context, accepts Telegram native location context, and gates the first Telegram-origin invite link behind Twilio Verify SMS.
 - `/start host_<token>` links a host chat, then `/start`, `/settings`, or `/admin` shows host controls for public profile visibility and discovery visibility.
 - `accept-invite` sends the visitor a Telegram message when the host accepts and the visitor linked Telegram.
 - `send-phone-otp` and `verify-phone-otp` provide Twilio Verify-backed phone verification primitives for the web invite wizard when `VITE_PHONE_VERIFICATION_MODE=twilio`.
@@ -171,7 +171,7 @@ Next bot features:
 
 - Send date reminders.
 - Safety Pack check-in buttons.
-- Production SMS OTP for Telegram phone verification and richer discovery ranking.
+- Richer discovery ranking and trusted Telegram-origin invite creation.
 
 The bot is not required for the first web invite submission. Visitor Telegram linking happens after invite submission or when the visitor chooses to browse nearby profiles.
 
@@ -219,7 +219,7 @@ These rules describe the next implementation phase. See [User Journey Scenarios]
 | Discovery visibility | `discovery_enabled` defaults true. Discovery only includes public, active, discovery-enabled profiles. |
 | Safety check-in | Host receives Telegram check-in reminders. Trusted contact receives SMS only for emergency or missed check-in. |
 | Discovery location | Start from the first viewed/invited host city, then use Telegram native location or manually sent city if provided. |
-| Discovery phone gate | Visitor can browse before phone verification, but the first Telegram-origin invite link is gated by Telegram phone verification. Current verification is mocked with test code `123456`; Twilio-backed verification remains a production task. |
+| Discovery phone gate | Visitor can browse before phone verification, but the first Telegram-origin invite link is gated by Twilio Verify SMS through the bot. |
 
 Planned backend surface:
 
@@ -242,7 +242,7 @@ Planned data changes:
 |---|---|
 | `telegram_connections` | Current table linking Telegram chat/user IDs to app users or invitees. Future migrations may split this into a stricter `telegram_accounts` model. |
 | `telegram_link_tokens` | Stores hashed, short-lived host Telegram linking tokens. Implemented by migration. |
-| `discovery_sessions` | Stores Telegram chat discovery context, current profile, pending invite profile, and mock phone verification state. |
+| `discovery_sessions` | Stores Telegram chat discovery context, current profile, pending invite profile, phone number, and current phone verification challenge reference. |
 | `phone_verifications` | Store OTP challenges, verification status, expiry, and provider metadata. Implemented by migration. |
 | `notification_outbox` / `notification_deliveries` | Queue and audit Telegram/SMS notifications. |
 | `sms_messages` | Focused delivery table for future Twilio message SID, recipient purpose, delivery status, failure reason, and callback timestamps. Implemented by migration; status callback handling is pending. |
