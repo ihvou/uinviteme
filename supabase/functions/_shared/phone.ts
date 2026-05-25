@@ -1,6 +1,7 @@
 const SUPPORTED_PREFIXES = [
   { countryCode: "SG", prefix: "+65" },
   { countryCode: "TR", prefix: "+90" },
+  { countryCode: "UA", prefix: "+380" },
   { countryCode: "AE", prefix: "+971" },
 ];
 
@@ -27,7 +28,7 @@ export function assertSupportedPhoneCountry(phoneE164: string) {
   const country = supportedPhoneCountry(phoneE164);
   if (!country) {
     throw new Error(
-      "Phone verification currently supports UAE, Turkey, and Singapore numbers",
+      "Phone verification currently supports UAE, Turkey, Singapore, and Ukraine numbers",
     );
   }
 

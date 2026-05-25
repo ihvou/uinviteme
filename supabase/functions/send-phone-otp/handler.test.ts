@@ -62,6 +62,41 @@ Deno.test("sendPhoneOtp starts Twilio Verify and records challenge", async () =>
   }
 });
 
+Deno.test("sendPhoneOtp supports Ukraine numbers", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+
+  await sendPhoneOtp(
+    { phone: "+380 67 650 9800" },
+    env,
+    createMockFetcher(calls) as typeof fetch,
+  );
+
+  const twilioCall = calls.find((call) =>
+    call.url.includes("/Services/VA123/Verifications")
+  );
+  if (!twilioCall?.init?.body) {
+    throw new Error("Twilio verification was not started");
+  }
+
+  const twilioBody = twilioCall.init.body as URLSearchParams;
+  if (twilioBody.get("To") !== "+380676509800") {
+    throw new Error("Ukraine number was not normalized for Twilio");
+  }
+
+  const insert = calls.find((call) =>
+    call.url.endsWith("/rest/v1/phone_verifications") &&
+    call.init?.method === "POST"
+  );
+  if (!insert?.init?.body) {
+    throw new Error("phone verification row was not inserted");
+  }
+
+  const row = JSON.parse(insert.init.body.toString());
+  if (row.country_code !== "UA") {
+    throw new Error(`unexpected country code: ${row.country_code}`);
+  }
+});
+
 Deno.test("sendPhoneOtp rejects unsupported countries before provider call", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
 
@@ -74,7 +109,7 @@ Deno.test("sendPhoneOtp rejects unsupported countries before provider call", asy
   } catch (error) {
     if (
       error instanceof Error &&
-      error.message.includes("supports UAE, Turkey, and Singapore")
+      error.message.includes("supports UAE, Turkey, Singapore, and Ukraine")
     ) {
       if (calls.length === 0) return;
       throw new Error("unsupported phone should not call Twilio");

@@ -114,7 +114,7 @@ Telegram is not required before invite submission. The visitor should be able to
 |---:|---|---|---|
 | 1 | Visitor | Opens `/:handle` or `/i/:token`. | App loads the host profile, active schedule, available slot, and screening config. |
 | 2 | Visitor | Chooses a slot and enters contact details. | Web wizard collects name, phone, optional Instagram/email/Telegram username, answers, and note. |
-| 3 | Visitor | Requests SMS verification code. | Current default: web wizard shows/sends test code `123456`. With Twilio mode enabled: `send-phone-otp` sends an OTP to UAE, Turkey, or Singapore phone number via Twilio Verify. |
+| 3 | Visitor | Requests SMS verification code. | Current default: web wizard shows/sends test code `123456`. With Twilio mode enabled: `send-phone-otp` sends an OTP to UAE, Turkey, Singapore, or Ukraine phone number via Twilio Verify. |
 | 4 | Visitor | Enters OTP in the web wizard. | Current default: correct test code marks phone verified locally. With Twilio mode enabled: `verify-phone-otp` checks Twilio Verify and marks the phone challenge verified server-side. |
 | 5 | Visitor | Submits invite. | `submit-invite` validates slot/date/link, re-checks mock code or approved Twilio verification reference, enforces one pending invite per verified phone per host, and creates invitee + invite server-side. |
 | 6 | System | Checks duplicate rule. | One active pending invite per verified phone per host is enforced. |
