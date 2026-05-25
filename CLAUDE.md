@@ -6,7 +6,7 @@ Read [AGENTS.md](AGENTS.md) first. This file adds Claude-specific orientation an
 
 uInvite.Me lets a host publish a public invite page with availability and screening questions. Visitors request a slot without creating an account. Hosts review requests, accept or decline, and use Safety Pack tooling for accepted dates.
 
-Host auth uses Supabase email/password and Google OAuth. Visitor identity is still handled through invite details and phone verification, not visitor accounts.
+Host auth uses Supabase email/password and Google Identity Services ID-token sign-in. Visitor identity is still handled through invite details and phone verification, not visitor accounts.
 
 ## Current Runtime
 

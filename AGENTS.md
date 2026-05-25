@@ -14,7 +14,7 @@ Primary product loop:
 4. Accepted invite becomes a Date.
 5. Host can activate a Safety Pack.
 
-Host auth supports email/password and Google OAuth through Supabase Auth. Visitors do not need accounts for invite submission.
+Host auth supports email/password and Google Identity Services ID-token sign-in through Supabase Auth. Visitors do not need accounts for invite submission.
 
 ## Commands
 

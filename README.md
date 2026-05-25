@@ -9,7 +9,7 @@ The app was originally generated in Lovable, but the current runtime is independ
 - Backend: Supabase Auth, Postgres, Storage, and Supabase Edge Functions
 - Production URL: <https://uinvite.me/>
 
-Host authentication supports Supabase email/password and Google OAuth. Visitor invite submission remains accountless and uses phone verification instead of auth.
+Host authentication supports Supabase email/password and Google Identity Services ID-token sign-in. Visitor invite submission remains accountless and uses phone verification instead of auth.
 
 ## Documentation
 
@@ -66,11 +66,14 @@ Frontend variables use Vite's `VITE_` prefix and are embedded into the browser b
 VITE_SUPABASE_URL=
 VITE_SUPABASE_PUBLISHABLE_KEY=
 VITE_SUPABASE_PROJECT_ID=
+VITE_GOOGLE_CLIENT_ID=
 VITE_TELEGRAM_BOT_USERNAME=
 VITE_PHONE_VERIFICATION_MODE=
 ```
 
 These publishable values are visible to browser users by design. Database security must come from Supabase Row Level Security policies. Never expose Supabase secret/service-role keys, Telegram bot tokens, SMS keys, payment keys, or other server secrets in frontend env vars.
+
+`VITE_GOOGLE_CLIENT_ID` is the public Google OAuth web client ID used by Google Identity Services on `/auth`. It is safe to expose in the browser. Google Client Secret still belongs only in Supabase's Google provider settings.
 
 `VITE_TELEGRAM_BOT_USERNAME` is optional. When set, the public invite success screen deep-links visitors into Telegram for accepted-invite notifications and nearby discovery.
 
@@ -94,7 +97,15 @@ Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functio
 
 ## Google Auth
 
-Google OAuth is configured in provider dashboards, not through Cloudflare env vars.
+Google auth uses Google Identity Services in the browser and then signs into Supabase with `signInWithIdToken`. This avoids sending users through Supabase's OAuth authorize screen, so Google's consent UI is anchored to `uinvite.me` instead of the Supabase project domain.
+
+Set this Cloudflare Pages variable:
+
+```txt
+VITE_GOOGLE_CLIENT_ID=<Google web client ID>
+```
+
+Google OAuth is otherwise configured in provider dashboards, not through Cloudflare secret env vars.
 
 Google Cloud OAuth client:
 
@@ -105,7 +116,7 @@ https://uinvite.me
 https://uinviteme.pages.dev
 http://localhost:5173
 
-Authorized redirect URI:
+Authorized redirect URI, kept for Supabase provider compatibility and fallback tooling:
 https://vvjgrvltnnqoiijoufry.supabase.co/auth/v1/callback
 ```
 

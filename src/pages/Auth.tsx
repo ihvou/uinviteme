@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { GoogleIdentityButton } from '@/components/auth/GoogleIdentityButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,7 +31,7 @@ export default function Auth() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  const { signUp, signIn, signInWithGoogle, user, loading: authLoading } = useAuth();
+  const { signUp, signIn, signInWithGoogleIdToken, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -119,12 +120,12 @@ export default function Auth() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleCredential = async (credential: string, nonce: string) => {
     setGoogleLoading(true);
     setErrors({});
 
     try {
-      const { error } = await signInWithGoogle();
+      const { error } = await signInWithGoogleIdToken(credential, nonce);
       if (error) {
         toast({
           variant: 'destructive',
@@ -141,6 +142,14 @@ export default function Auth() {
     } finally {
       setGoogleLoading(false);
     }
+  };
+
+  const handleGoogleError = (message: string) => {
+    toast({
+      variant: 'destructive',
+      title: 'Google sign in failed',
+      description: message,
+    });
   };
 
   if (authLoading) {
@@ -172,22 +181,12 @@ export default function Auth() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleGoogleSignIn}
-                disabled={loading || googleLoading}
-              >
-                {googleLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <span className="mr-2 flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-semibold">
-                    G
-                  </span>
-                )}
-                Continue with Google
-              </Button>
+              <GoogleIdentityButton
+                disabled={loading}
+                loading={googleLoading}
+                onCredential={handleGoogleCredential}
+                onError={handleGoogleError}
+              />
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
