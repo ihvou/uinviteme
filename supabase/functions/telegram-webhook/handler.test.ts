@@ -281,7 +281,7 @@ Deno.test("handleTelegramUpdate lets linked host accept invite", async () => {
   }
 });
 
-Deno.test("handleTelegramUpdate sends host web links for linked hosts", async () => {
+Deno.test("handleTelegramUpdate lists pending invites natively for linked hosts", async () => {
   const mock = createMockFetcher();
   mock.telegramConnections.push({
     user_id: ORIGIN_ID,
@@ -302,13 +302,19 @@ Deno.test("handleTelegramUpdate sends host web links for linked hosts", async ()
     mock.fetcher as typeof fetch,
   );
 
-  if (result.action !== "host_pending_invites_link") {
+  if (result.action !== "host_pending_invites_list") {
     throw new Error(`unexpected action: ${JSON.stringify(result)}`);
   }
 
   const pendingBody = mock.lastTelegramBody();
-  if (!pendingBody.text.includes("https://uinvite.me/invites")) {
-    throw new Error("pending invite link was not sent");
+  if (
+    !pendingBody.text.includes("E2E Visitor") ||
+    pendingBody.reply_markup?.inline_keyboard?.[0]?.[0]?.callback_data !==
+      "host_accept:6c8bcf8f-d128-4338-9ddc-c1bf8bd3424c" ||
+    pendingBody.reply_markup?.inline_keyboard?.[0]?.[1]?.callback_data !==
+      "host_decline:6c8bcf8f-d128-4338-9ddc-c1bf8bd3424c"
+  ) {
+    throw new Error("pending invite was not rendered natively");
   }
 
   const datesResult = await handleTelegramUpdate(
@@ -797,6 +803,36 @@ function createMockFetcher() {
     }
 
     if (normalizedUrl.includes("/rest/v1/invites")) {
+      if (normalizedUrl.includes("status=eq.pending")) {
+        return json([
+          {
+            id: "6c8bcf8f-d128-4338-9ddc-c1bf8bd3424c",
+            target_date: "2026-05-25",
+            created_at: "2026-05-20T12:34:00Z",
+            invitee_note: "Coffee first, then we can decide.",
+            invitee: {
+              id: "f4bc85ec-e916-4c2d-8f9a-4bb831fb3b21",
+              name: "E2E Visitor",
+              phone_e164: "+6591234567",
+              phone_verified: true,
+              instagram_handle: "e2evisitor",
+              telegram_username: "e2evisitor",
+              occupation: "Product manager",
+            },
+            slot: {
+              id: "slot-maya-1",
+              weekday: 2,
+              time_bucket: "early_evening",
+              time_start: null,
+              time_end: null,
+              area_label: "Marina Bay",
+              pay_pref: "decide_together",
+              notes: "Dinner with a skyline view.",
+            },
+          },
+        ]);
+      }
+
       return json([
         {
           id: "6c8bcf8f-d128-4338-9ddc-c1bf8bd3424c",

@@ -82,6 +82,32 @@ interface InviteRecord {
   status: "pending" | "accepted" | "declined";
 }
 
+interface HostPendingInviteRecord {
+  id: string;
+  target_date: string;
+  created_at: string | null;
+  invitee_note: string | null;
+  invitee: {
+    id: string;
+    name: string;
+    phone_e164: string | null;
+    phone_verified: boolean | null;
+    instagram_handle: string | null;
+    telegram_username: string | null;
+    occupation: string | null;
+  } | null;
+  slot: {
+    id: string;
+    weekday: number;
+    time_bucket: string;
+    time_start: string | null;
+    time_end: string | null;
+    area_label: string | null;
+    pay_pref: string | null;
+    notes: string | null;
+  } | null;
+}
+
 interface InviteeRecord {
   id: string;
   phone_verified: boolean | null;
@@ -382,11 +408,11 @@ export async function handleTelegramUpdate(
   }
 
   if (isPendingInvitesText(text)) {
-    return await sendHostWebLinkForChat(env, fetcher, chatId, "pending");
+    return await sendHostPendingInvitesForChat(env, fetcher, chatId);
   }
 
   if (isMyDatesText(text)) {
-    return await sendHostWebLinkForChat(env, fetcher, chatId, "dates");
+    return await sendHostDatesLinkForChat(env, fetcher, chatId);
   }
 
   if (text.toLowerCase() === SKIP_PROFILE_LABEL.toLowerCase()) {
@@ -720,11 +746,10 @@ async function sendHostAdminMenu(
   };
 }
 
-async function sendHostWebLinkForChat(
+async function sendHostPendingInvitesForChat(
   env: TelegramWebhookEnv,
   fetcher: Fetcher,
   chatId: string,
-  destination: "pending" | "dates",
 ) {
   const connection = await getHostTelegramConnectionByChat(
     env,
@@ -743,33 +768,100 @@ async function sendHostWebLinkForChat(
     return { ok: true, action: "host_not_linked" };
   }
 
-  const base = env.publicSiteUrl.replace(/\/+$/, "");
-  const lines = destination === "pending"
-    ? [
-      "Pending invites are in your web dashboard.",
-      "",
-      `Invite queue: ${base}/invites`,
-    ]
-    : [
-      "Your dates are in your web dashboard.",
-      "",
-      `My dates: ${base}/dates`,
-    ];
+  const schedules = await getSchedulesForUser(env, fetcher, connection.user_id);
+
+  if (schedules.length === 0) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "I couldn't find your invite schedule yet. Create or update your invite page in the web app first.",
+      hostMainKeyboard(),
+    );
+    return { ok: true, action: "host_schedule_missing" };
+  }
+
+  const invites = await getPendingInvitesForSchedules(
+    env,
+    fetcher,
+    schedules.map((schedule) => schedule.id),
+  );
+
+  if (invites.length === 0) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "No pending invites right now.",
+      hostMainKeyboard(),
+    );
+    return { ok: true, action: "host_pending_invites_empty" };
+  }
 
   await sendTelegramMessage(
     env,
     fetcher,
     chatId,
-    lines.join("\n"),
+    invites.length === 1
+      ? "You have 1 pending invite."
+      : `You have ${invites.length} pending invites. Showing the latest ${invites.length}.`,
     hostMainKeyboard(),
   );
 
+  for (const [index, invite] of invites.entries()) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      formatHostPendingInvite(invite, index + 1),
+      hostInviteDecisionKeyboard(invite.id),
+      "HTML",
+    );
+  }
+
   return {
     ok: true,
-    action: destination === "pending"
-      ? "host_pending_invites_link"
-      : "host_dates_link",
+    action: "host_pending_invites_list",
+    count: invites.length,
   };
+}
+
+async function sendHostDatesLinkForChat(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  chatId: string,
+) {
+  const connection = await getHostTelegramConnectionByChat(
+    env,
+    fetcher,
+    chatId,
+  );
+
+  if (!connection?.user_id) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "Link your host account from Settings before opening host dates here.",
+      removeKeyboard(),
+    );
+    return { ok: true, action: "host_not_linked" };
+  }
+
+  const base = env.publicSiteUrl.replace(/\/+$/, "");
+  await sendTelegramMessage(
+    env,
+    fetcher,
+    chatId,
+    [
+      "Your dates are in your web dashboard.",
+      "",
+      `My dates: ${base}/dates`,
+    ].join("\n"),
+    hostMainKeyboard(),
+  );
+
+  return { ok: true, action: "host_dates_link" };
 }
 
 async function handleBackMessage(
@@ -944,7 +1036,7 @@ async function handleHostInviteDecision(
       fetcher,
       chatId,
       decision === "accepted"
-        ? "Invite accepted. The date was added to your dashboard."
+        ? "Invite accepted. The date was added to My dates."
         : "Invite declined. It was removed from your pending queue.",
       hostMainKeyboard(),
     );
@@ -962,7 +1054,7 @@ async function handleHostInviteDecision(
       chatId,
       error instanceof Error && error.message === "Forbidden"
         ? "I couldn't update this invite because it belongs to another host account."
-        : "I couldn't update this invite. Please try from the web dashboard.",
+        : "I couldn't update this invite. Please try again or open the web app.",
       hostMainKeyboard(),
     );
 
@@ -1645,6 +1737,40 @@ async function getHostHandleForSchedule(
   );
 
   return profiles[0]?.handle || null;
+}
+
+async function getSchedulesForUser(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  userId: string,
+) {
+  return await supabaseRest<ScheduleRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/schedules?user_id=eq.${
+      encodeURIComponent(userId)
+    }&select=id,user_id&order=created_at.desc`,
+  );
+}
+
+async function getPendingInvitesForSchedules(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  scheduleIds: string[],
+) {
+  if (scheduleIds.length === 0) return [];
+
+  const scheduleFilter = scheduleIds.length === 1
+    ? `schedule_id=eq.${encodeURIComponent(scheduleIds[0])}`
+    : `schedule_id=in.(${
+      scheduleIds.map((scheduleId) => encodeURIComponent(scheduleId)).join(",")
+    })`;
+
+  return await supabaseRest<HostPendingInviteRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/invites?${scheduleFilter}&status=eq.pending&select=id,target_date,created_at,invitee_note,invitee:invitees(id,name,phone_e164,phone_verified,instagram_handle,telegram_username,occupation),slot:slots(id,weekday,time_bucket,time_start,time_end,area_label,pay_pref,notes)&order=created_at.desc&limit=10`,
+  );
 }
 
 async function getLatestBrowseHandleForChat(
@@ -2392,6 +2518,15 @@ function hostMainKeyboard() {
   };
 }
 
+function hostInviteDecisionKeyboard(inviteId: string) {
+  return {
+    inline_keyboard: [[
+      { text: "Accept", callback_data: `${HOST_ACCEPT_CALLBACK_PREFIX}${inviteId}` },
+      { text: "Decline", callback_data: `${HOST_DECLINE_CALLBACK_PREFIX}${inviteId}` },
+    ]],
+  };
+}
+
 function hostVisibilityKeyboard(profile: HostVisibilityProfileRecord) {
   return {
     inline_keyboard: [
@@ -2445,6 +2580,87 @@ function formatHostSettingsText(
   ].filter(Boolean);
 
   return lines.join("\n");
+}
+
+function formatHostPendingInvite(invite: HostPendingInviteRecord, index: number) {
+  const invitee = invite.invitee;
+  const slot = invite.slot;
+  const contacts = [
+    invitee?.phone_e164
+      ? `Phone: ${escapeHtml(invitee.phone_e164)}${
+        invitee.phone_verified ? " (verified)" : ""
+      }`
+      : null,
+    invitee?.instagram_handle
+      ? `Instagram: ${instagramHtmlLink(invitee.instagram_handle)}`
+      : null,
+    invitee?.telegram_username
+      ? `Telegram: @${escapeHtml(normalizeSocialHandle(invitee.telegram_username))}`
+      : null,
+  ].filter(Boolean);
+
+  const lines = [
+    `<b>${index}. ${escapeHtml(invitee?.name || "Visitor")}</b>`,
+    invite.created_at ? `Received: ${escapeHtml(formatShortDateTime(invite.created_at))}` : null,
+    `When: ${escapeHtml(formatTargetDate(invite.target_date))}${
+      slot ? `, ${escapeHtml(formatHostPendingSlotTime(slot))}` : ""
+    }`,
+    slot?.area_label ? `Where: ${escapeHtml(slot.area_label)}` : null,
+    contacts.length > 0 ? contacts.join("\n") : null,
+    invitee?.occupation ? `Occupation: ${escapeHtml(invitee.occupation)}` : null,
+    invite.invitee_note ? `Note: ${escapeHtml(invite.invitee_note)}` : null,
+  ].filter(Boolean);
+
+  return lines.join("\n");
+}
+
+function formatHostPendingSlotTime(
+  slot: NonNullable<HostPendingInviteRecord["slot"]>,
+) {
+  if (slot.time_start && slot.time_end) {
+    return `${slot.time_start} - ${slot.time_end}`;
+  }
+  return timeBucketLabel(slot.time_bucket);
+}
+
+function formatTargetDate(value: string) {
+  const date = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatShortDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function normalizeSocialHandle(value: string) {
+  return value.trim().replace(/^@+/, "");
+}
+
+function instagramHtmlLink(value: string) {
+  const handle = normalizeSocialHandle(value);
+  const url = `https://instagram.com/${encodeURIComponent(handle)}`;
+  return `<a href="${url}">@${escapeHtml(handle)}</a>`;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function formatHostVisibilityCallbackMessage(
