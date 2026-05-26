@@ -131,8 +131,9 @@ Deno.test("handleTelegramUpdate links host Telegram admin", async () => {
   );
   if (
     shortcutBody?.reply_markup?.keyboard?.[0]?.[1]?.text !==
-      "View accepted invites" ||
-    shortcutBody?.reply_markup?.keyboard?.[1]?.[0]?.text !==
+      "Pending invites" ||
+    shortcutBody?.reply_markup?.keyboard?.[1]?.[0]?.text !== "My dates" ||
+    shortcutBody?.reply_markup?.keyboard?.[1]?.[1]?.text !==
       "Browse profiles nearby"
   ) {
     throw new Error("host shortcut keyboard was not sent");
@@ -273,13 +274,14 @@ Deno.test("handleTelegramUpdate lets linked host accept invite", async () => {
   if (
     telegramBody.reply_markup?.keyboard?.[0]?.[0]?.text !== "My profile" ||
     telegramBody.reply_markup?.keyboard?.[0]?.[1]?.text !==
-      "View accepted invites"
+      "Pending invites" ||
+    telegramBody.reply_markup?.keyboard?.[1]?.[0]?.text !== "My dates"
   ) {
     throw new Error("host accept confirmation did not keep host shortcuts");
   }
 });
 
-Deno.test("handleTelegramUpdate sends accepted invites web links for linked hosts", async () => {
+Deno.test("handleTelegramUpdate sends host web links for linked hosts", async () => {
   const mock = createMockFetcher();
   mock.telegramConnections.push({
     user_id: ORIGIN_ID,
@@ -291,7 +293,7 @@ Deno.test("handleTelegramUpdate sends accepted invites web links for linked host
   const result = await handleTelegramUpdate(
     {
       message: {
-        text: "View accepted invites",
+        text: "Pending invites",
         chat: { id: CHAT_ID },
         from: { username: "HostUser" },
       },
@@ -300,16 +302,34 @@ Deno.test("handleTelegramUpdate sends accepted invites web links for linked host
     mock.fetcher as typeof fetch,
   );
 
-  if (result.action !== "host_accepted_invites_link") {
+  if (result.action !== "host_pending_invites_link") {
     throw new Error(`unexpected action: ${JSON.stringify(result)}`);
   }
 
-  const telegramBody = mock.lastTelegramBody();
-  if (
-    !telegramBody.text.includes("https://uinvite.me/dates") ||
-    !telegramBody.text.includes("https://uinvite.me/invites")
-  ) {
-    throw new Error("accepted invite links were not sent");
+  const pendingBody = mock.lastTelegramBody();
+  if (!pendingBody.text.includes("https://uinvite.me/invites")) {
+    throw new Error("pending invite link was not sent");
+  }
+
+  const datesResult = await handleTelegramUpdate(
+    {
+      message: {
+        text: "My dates",
+        chat: { id: CHAT_ID },
+        from: { username: "HostUser" },
+      },
+    },
+    env(),
+    mock.fetcher as typeof fetch,
+  );
+
+  if (datesResult.action !== "host_dates_link") {
+    throw new Error(`unexpected action: ${JSON.stringify(datesResult)}`);
+  }
+
+  const datesBody = mock.lastTelegramBody();
+  if (!datesBody.text.includes("https://uinvite.me/dates")) {
+    throw new Error("dates link was not sent");
   }
 });
 

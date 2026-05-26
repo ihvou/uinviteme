@@ -18,7 +18,9 @@ const CANCEL_LABEL = "Cancel";
 const SHARE_PHONE_LABEL = "Share phone number";
 const HOST_SETTINGS_LABEL = "Host settings";
 const HOST_PROFILE_LABEL = "My profile";
-const VIEW_ACCEPTED_INVITES_LABEL = "View accepted invites";
+const PENDING_INVITES_LABEL = "Pending invites";
+const MY_DATES_LABEL = "My dates";
+const LEGACY_ACCEPTED_INVITES_LABEL = "View accepted invites";
 const PHONE_CODE_REGEX = /^\d{4,10}$/;
 const SLOT_CALLBACK_PREFIX = "slot:";
 const HOST_ACCEPT_CALLBACK_PREFIX = "host_accept:";
@@ -374,8 +376,12 @@ export async function handleTelegramUpdate(
     return await sendHostAdminMenuForChat(env, fetcher, chatId);
   }
 
-  if (isViewAcceptedInvitesText(text)) {
-    return await sendAcceptedInvitesLinkForChat(env, fetcher, chatId);
+  if (isPendingInvitesText(text)) {
+    return await sendHostWebLinkForChat(env, fetcher, chatId, "pending");
+  }
+
+  if (isMyDatesText(text)) {
+    return await sendHostWebLinkForChat(env, fetcher, chatId, "dates");
   }
 
   if (text.toLowerCase() === SKIP_PROFILE_LABEL.toLowerCase()) {
@@ -709,10 +715,11 @@ async function sendHostAdminMenu(
   };
 }
 
-async function sendAcceptedInvitesLinkForChat(
+async function sendHostWebLinkForChat(
   env: TelegramWebhookEnv,
   fetcher: Fetcher,
   chatId: string,
+  destination: "pending" | "dates",
 ) {
   const connection = await getHostTelegramConnectionByChat(
     env,
@@ -732,20 +739,32 @@ async function sendAcceptedInvitesLinkForChat(
   }
 
   const base = env.publicSiteUrl.replace(/\/+$/, "");
+  const lines = destination === "pending"
+    ? [
+      "Pending invites are in your web dashboard.",
+      "",
+      `Invite queue: ${base}/invites`,
+    ]
+    : [
+      "Your dates are in your web dashboard.",
+      "",
+      `My dates: ${base}/dates`,
+    ];
+
   await sendTelegramMessage(
     env,
     fetcher,
     chatId,
-    [
-      "Accepted invites are in your web dashboard.",
-      "",
-      `Dates: ${base}/dates`,
-      `Invite queue: ${base}/invites`,
-    ].join("\n"),
+    lines.join("\n"),
     hostMainKeyboard(),
   );
 
-  return { ok: true, action: "host_accepted_invites_link" };
+  return {
+    ok: true,
+    action: destination === "pending"
+      ? "host_pending_invites_link"
+      : "host_dates_link",
+  };
 }
 
 async function handleHostVisibilityCallback(
@@ -2314,8 +2333,8 @@ function phoneRequestKeyboard() {
 function hostMainKeyboard() {
   return {
     keyboard: [
-      [{ text: HOST_PROFILE_LABEL }, { text: VIEW_ACCEPTED_INVITES_LABEL }],
-      [{ text: BROWSE_PROFILES_LABEL }],
+      [{ text: HOST_PROFILE_LABEL }, { text: PENDING_INVITES_LABEL }],
+      [{ text: MY_DATES_LABEL }, { text: BROWSE_PROFILES_LABEL }],
     ],
     resize_keyboard: true,
     is_persistent: true,
@@ -2368,7 +2387,8 @@ function formatHostSettingsText(
     `Discovery: ${discoveryStatus}`,
     "",
     `Update profile: ${base}/settings`,
-    `Accepted invites: ${base}/dates`,
+    `Pending invites: ${base}/invites`,
+    `My dates: ${base}/dates`,
     "",
     "Tap a button below to toggle availability.",
   ].filter(Boolean);
@@ -2418,9 +2438,16 @@ function isHostSettingsText(text: string) {
     normalized === "/admin";
 }
 
-function isViewAcceptedInvitesText(text: string) {
+function isPendingInvitesText(text: string) {
   const normalized = text.trim().toLowerCase();
-  return normalized === VIEW_ACCEPTED_INVITES_LABEL.toLowerCase() ||
+  return normalized === PENDING_INVITES_LABEL.toLowerCase() ||
+    normalized === "/invites";
+}
+
+function isMyDatesText(text: string) {
+  const normalized = text.trim().toLowerCase();
+  return normalized === MY_DATES_LABEL.toLowerCase() ||
+    normalized === LEGACY_ACCEPTED_INVITES_LABEL.toLowerCase() ||
     normalized === "/dates";
 }
 
