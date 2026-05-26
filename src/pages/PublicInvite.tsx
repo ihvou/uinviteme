@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Heart, Calendar, MapPin, Lock, AlertCircle, Coffee, Wine, UtensilsCrossed, Sparkles } from 'lucide-react';
+import { Calendar, MapPin, Lock, AlertCircle, Coffee, Wine, UtensilsCrossed, Sparkles } from 'lucide-react';
 import { usePublicInvite, SlotWithDate } from '@/hooks/usePublicInvite';
 import { InviteSubmitSuccess, InviteWizard } from '@/components/invite/InviteWizard';
 import { InviteSubmittedCard } from '@/components/invite/InviteSubmittedCard';
+import { BrandLogo } from '@/components/BrandLogo';
 
 const formatIcons: Record<string, typeof Coffee> = {
   Coffee: Coffee,
@@ -56,8 +57,7 @@ export default function PublicInvite() {
         <nav className="bg-background/80 backdrop-blur-md border-b border-border">
           <div className="container mx-auto px-4 h-16 flex items-center">
             <Link to="/" className="flex items-center gap-2">
-              <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-              <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+              <BrandLogo />
             </Link>
           </div>
         </nav>
@@ -103,8 +103,7 @@ export default function PublicInvite() {
         <nav className="bg-background/80 backdrop-blur-md border-b border-border">
           <div className="container mx-auto px-4 h-16 flex items-center">
             <Link to="/" className="flex items-center gap-2">
-              <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-              <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+              <BrandLogo />
             </Link>
           </div>
         </nav>
@@ -126,8 +125,7 @@ export default function PublicInvite() {
         <nav className="bg-background/80 backdrop-blur-md border-b border-border">
           <div className="container mx-auto px-4 h-16 flex items-center">
             <Link to="/" className="flex items-center gap-2">
-              <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-              <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+              <BrandLogo />
             </Link>
           </div>
         </nav>
@@ -155,8 +153,7 @@ export default function PublicInvite() {
       <nav className="bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-            <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+            <BrandLogo />
           </Link>
         </div>
       </nav>

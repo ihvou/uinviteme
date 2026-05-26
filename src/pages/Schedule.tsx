@@ -7,13 +7,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Heart, ArrowLeft, Calendar, Plus, Loader2, Pencil, Trash2, Coffee, Wine, Footprints, Utensils, Palette, Activity, Music, Sun, Bike, MoreHorizontal, Power } from 'lucide-react';
+import { ArrowLeft, Calendar, Plus, Loader2, Pencil, Trash2, Coffee, Wine, Footprints, Utensils, Palette, Activity, Music, Sun, Bike, MoreHorizontal, Power } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SlotFormDialog } from '@/components/schedule/SlotFormDialog';
 import { ScreeningConfigCard } from '@/components/settings/ScreeningConfigCard';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { BrandLogo } from '@/components/BrandLogo';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -157,8 +158,7 @@ export default function Schedule() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-            <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+            <BrandLogo />
           </Link>
         </div>
       </header>

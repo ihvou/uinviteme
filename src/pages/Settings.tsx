@@ -22,7 +22,6 @@ import {
   ArrowLeft,
   Compass,
   Globe,
-  Heart,
   Instagram,
   Loader2,
   User,
@@ -33,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PhotoUpload } from "@/components/settings/PhotoUpload";
 import { HostTelegramConnectCard } from "@/components/settings/HostTelegramConnectCard";
+import { BrandLogo } from "@/components/BrandLogo";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Profile = Tables<"profiles">;
@@ -157,10 +157,7 @@ export default function Settings() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-            <span className="font-display text-xl font-semibold text-foreground">
-              uInvite.Me
-            </span>
+            <BrandLogo />
           </Link>
         </div>
       </header>

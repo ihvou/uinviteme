@@ -143,12 +143,13 @@ Status: Implemented as Telegram admin MVP.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
-| 1 | Host | Creates a Telegram link from web Settings and opens it. | `create-telegram-link` creates a short-lived token; `/start host_<token>` links Telegram chat to the host user. |
+| 1 | Host | Turns on "Get invites directly to Telegram" from web Settings or Invites. | If Telegram is not linked yet, `create-telegram-link` creates a short-lived token and the UI shows an Open Telegram link. `/start host_<token>` links Telegram chat to the host user. |
 | 2 | System | New invite arrives. | Host gets Telegram message with invite summary and inline Accept/Decline buttons. |
 | 3 | Host | Taps Accept or Decline. | Bot callback reuses trusted `accept-invite` backend logic for both decisions. |
 | 4 | System | Updates invite lifecycle. | Pending invite is removed; accepted invite becomes a date; opted-in visitor is notified. |
 | 5 | Host | Uses `/start`, `/settings`, `/admin`, or the persistent host keyboard to open profile controls, view accepted-invite links, or browse nearby profiles. | Bot keeps host shortcuts available after linking and invite decisions; profile controls include public profile link plus web Settings/Dates links. |
-| 6 | Host | Toggles availability from profile controls. | Bot updates `public_profile_enabled` and `discovery_enabled`; the web Settings page reflects the same state. |
+| 6 | Host | Toggles Telegram delivery after linking. | `set-telegram-host-notifications` pauses or resumes Telegram invite notifications while keeping the account linked. |
+| 7 | Host | Toggles availability from profile controls. | Bot updates `public_profile_enabled` and `discovery_enabled`; the web Settings page reflects the same state. |
 
 Success condition: a linked host can review invites, accept/decline them, and quickly hide or show public/discovery availability from Telegram without opening the web dashboard.
 

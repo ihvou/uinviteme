@@ -2,10 +2,11 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Heart, ArrowLeft, Calendar, MapPin, Coffee, Wine, Sun, Lock, Info } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Coffee, Wine, Sun, Lock, Info } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useState } from 'react';
 import demoJamiePhoto from '@/assets/demo-jamie.jpg';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export default function DemoInvite() {
   const [expandedSlot, setExpandedSlot] = useState<string | null>(null);
@@ -54,8 +55,7 @@ export default function DemoInvite() {
       <nav className="bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-            <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+            <BrandLogo />
           </Link>
           <Link to="/">
             <Button variant="ghost" size="sm" className="gap-2">

@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Heart, Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
+import { BrandLogo } from '@/components/BrandLogo';
 
 const signUpSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -164,8 +165,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-subtle px-4 py-12">
       <div className="w-full max-w-md animate-fade-in">
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-          <Heart className="h-8 w-8 text-primary" fill="currentColor" />
-          <span className="font-display text-2xl font-semibold text-foreground">uInvite.Me</span>
+          <BrandLogo size="lg" />
         </Link>
 
         <Card className="shadow-lg">

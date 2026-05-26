@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Calendar, Shield, CheckCircle, MessageCircle, Clock, Phone, AlertTriangle, Heart, ArrowRight, Lock } from 'lucide-react';
+import { Calendar, Shield, CheckCircle, MessageCircle, Clock, Phone, AlertTriangle, ArrowRight, Lock } from 'lucide-react';
+import { BrandLogo } from '@/components/BrandLogo';
 import demoAvatar from '@/assets/demo-jamie.jpg';
 
 export default function Landing() {
@@ -10,8 +11,7 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-            <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+            <BrandLogo />
           </Link>
           <div className="flex items-center gap-4">
             <Link to="/auth">
@@ -319,8 +319,7 @@ export default function Landing() {
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
-              <Heart className="h-5 w-5 text-primary" fill="currentColor" />
-              <span className="font-display font-semibold text-foreground">uInvite.Me</span>
+              <BrandLogo size="sm" />
             </div>
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} uInvite.Me. All rights reserved.

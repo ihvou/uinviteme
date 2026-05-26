@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Heart, ArrowLeft, Shield, Copy, Clock, CheckCircle, Phone, AlertTriangle, MapPin, Calendar, User, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Shield, Copy, Clock, CheckCircle, Phone, AlertTriangle, MapPin, Calendar, User, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export default function DemoSafetyPack() {
   const [isActivated, setIsActivated] = useState(false);
@@ -36,8 +37,7 @@ export default function DemoSafetyPack() {
       <nav className="bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-            <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+            <BrandLogo />
           </Link>
           <Link to="/">
             <Button variant="ghost" size="sm" className="gap-2">

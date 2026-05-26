@@ -9,12 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  Heart, ArrowLeft, Loader2, Shield, Calendar, MapPin, Clock, 
+import {
+  ArrowLeft, Loader2, Shield, Calendar, MapPin, Clock,
   User, Save, Instagram, Phone, Mail, Send, MessageSquare
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { BrandLogo } from '@/components/BrandLogo';
 
 const timeBucketOptions = [
   { value: 'morning', label: 'Morning (8am-12pm)' },
@@ -97,8 +98,7 @@ export default function DateDetail() {
         <header className="border-b border-border bg-card/50 backdrop-blur-sm">
           <div className="container mx-auto px-4 h-16 flex items-center">
             <Link to="/dates" className="flex items-center gap-2">
-              <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-              <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+              <BrandLogo />
             </Link>
           </div>
         </header>
@@ -124,8 +124,7 @@ export default function DateDetail() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-            <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+            <BrandLogo />
           </Link>
         </div>
       </header>

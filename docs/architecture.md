@@ -229,6 +229,7 @@ Planned backend surface:
 |---|---|
 | `telegram-webhook` | Receive Telegram updates, link accounts, process callback buttons, drive visitor discovery and host admin menus. |
 | `create-telegram-link` | Authenticated host endpoint that creates a short-lived Telegram `/start host_<token>` payload for account linking. Implemented. |
+| `set-telegram-host-notifications` | Authenticated host endpoint that enables or pauses invite notifications for an already linked Telegram host chat. Implemented. |
 | `send-phone-otp` | Send SMS OTP to visitor phone numbers through Twilio Verify. Implemented. |
 | `verify-phone-otp` | Verify Twilio OTP and issue a short-lived phone verification reference. Implemented. |
 | `submit-invite` | Validate public invite payload, phone verification, duplicate rule, and create invite server-side. Implemented; CAPTCHA, stronger date validation, one-time link consumption, and screening/moderation enforcement remain planned hardening. |

@@ -9,14 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { 
-  Heart, ArrowLeft, Loader2, Shield, Copy, Clock, CheckCircle, 
+import {
+  ArrowLeft, Loader2, Shield, Copy, Clock, CheckCircle,
   Phone, AlertTriangle, MapPin, Calendar, User, ChevronDown, ChevronUp,
   Pause, Square, Info
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { format, addMinutes, parse, setHours, setMinutes } from 'date-fns';
 import { toast } from 'sonner';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export default function DateSafetyPack() {
   const { dateId } = useParams<{ dateId: string }>();
@@ -134,8 +135,7 @@ I'll check in by ${checkinTime ? format(parse(checkinTime, 'HH:mm', new Date()),
         <header className="border-b border-border bg-card/50 backdrop-blur-sm">
           <div className="container mx-auto px-4 h-16 flex items-center">
             <Link to="/dates" className="flex items-center gap-2">
-              <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-              <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+              <BrandLogo />
             </Link>
           </div>
         </header>
@@ -163,8 +163,7 @@ I'll check in by ${checkinTime ? format(parse(checkinTime, 'HH:mm', new Date()),
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-            <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+            <BrandLogo />
           </Link>
         </div>
       </header>

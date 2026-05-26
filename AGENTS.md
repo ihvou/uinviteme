@@ -58,6 +58,7 @@ Supabase Edge Functions are now part of the repo for trusted backend slices:
 
 - `supabase/functions/telegram-webhook` handles visitor Telegram opt-in, discovery browsing, inline slot callbacks, host invite admin, host public/discovery visibility toggles, and Twilio-backed Telegram discovery phone verification.
 - `supabase/functions/create-telegram-link` creates short-lived host Telegram link tokens from authenticated Settings sessions.
+- `supabase/functions/set-telegram-host-notifications` lets a linked host pause or resume Telegram invite notifications from the web UI.
 - `supabase/functions/accept-invite` handles authenticated host accept/decline decisions and visitor Telegram notifications.
 - `supabase/functions/submit-invite` handles public invite submission, server-side mock/Twilio phone verification checks, duplicate pending invite prevention, and invite creation.
 - `supabase/functions/send-phone-otp` and `supabase/functions/verify-phone-otp` handle Twilio Verify OTP plus the optional server-only `PHONE_VERIFICATION_TEST_CODE` QA override.

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Heart, ArrowLeft, Users, Loader2, Calendar, MapPin, Check, X, MessageSquare, Instagram, Phone, User } from 'lucide-react';
+import { ArrowLeft, Users, Loader2, Calendar, MapPin, Check, X, MessageSquare, Instagram, Phone, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
 import { HostTelegramConnectCard } from '@/components/settings/HostTelegramConnectCard';
+import { BrandLogo } from '@/components/BrandLogo';
 
 type Invite = Tables<'invites'>;
 type Invitee = Tables<'invitees'>;
@@ -27,6 +28,7 @@ export default function Invites() {
   const [invites, setInvites] = useState<InviteWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [decidingInviteId, setDecidingInviteId] = useState<string | null>(null);
+  const [telegramLinked, setTelegramLinked] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -125,8 +127,7 @@ export default function Invites() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <Heart className="h-6 w-6 text-primary" fill="currentColor" />
-            <span className="font-display text-xl font-semibold text-foreground">uInvite.Me</span>
+            <BrandLogo />
           </Link>
         </div>
       </header>
@@ -143,9 +144,14 @@ export default function Invites() {
           </p>
         </div>
 
-        <div className="mb-6">
-          <HostTelegramConnectCard description="Connect Telegram to get new invite requests here and in chat" />
-        </div>
+        {telegramLinked !== true && (
+          <div className="mb-6">
+            <HostTelegramConnectCard
+              description="Turn this on to receive new invite requests in chat as well as here."
+              onLinkedStateChange={setTelegramLinked}
+            />
+          </div>
+        )}
 
         {invites.length > 0 ? (
           <div className="space-y-4">
@@ -258,6 +264,15 @@ export default function Invites() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {telegramLinked === true && (
+          <div className="mt-6">
+            <HostTelegramConnectCard
+              description="Turn this on to receive new invite requests in chat as well as here."
+              onLinkedStateChange={setTelegramLinked}
+            />
+          </div>
         )}
       </main>
     </div>

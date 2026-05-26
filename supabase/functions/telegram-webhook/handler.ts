@@ -1917,7 +1917,7 @@ async function getHostTelegramConnectionByChat(
     fetcher,
     `/rest/v1/telegram_connections?telegram_chat_id=eq.${
       encodeURIComponent(chatId)
-    }&user_id=not.is.null&is_active=eq.true&select=user_id,telegram_chat_id,telegram_username&order=updated_at.desc&limit=1`,
+    }&user_id=not.is.null&select=user_id,telegram_chat_id,telegram_username&order=updated_at.desc&limit=1`,
   );
 
   return rows[0] ?? null;

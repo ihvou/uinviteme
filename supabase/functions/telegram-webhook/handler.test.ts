@@ -207,6 +207,32 @@ Deno.test("handleTelegramUpdate lets linked host manage visibility", async () =>
   }
 });
 
+Deno.test("handleTelegramUpdate keeps host admin available when notifications are paused", async () => {
+  const mock = createMockFetcher();
+  mock.telegramConnections.push({
+    user_id: ORIGIN_ID,
+    telegram_chat_id: CHAT_ID,
+    telegram_username: "HostUser",
+    is_active: false,
+  });
+
+  const result = await handleTelegramUpdate(
+    {
+      message: {
+        text: "/start",
+        chat: { id: CHAT_ID },
+        from: { username: "HostUser" },
+      },
+    },
+    env(),
+    mock.fetcher as typeof fetch,
+  );
+
+  if (result.action !== "host_settings") {
+    throw new Error(`unexpected paused-host action: ${JSON.stringify(result)}`);
+  }
+});
+
 Deno.test("handleTelegramUpdate lets linked host accept invite", async () => {
   const mock = createMockFetcher();
   mock.telegramConnections.push({

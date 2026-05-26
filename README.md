@@ -149,6 +149,7 @@ Committed functions:
 |---|---|---|
 | `telegram-webhook` | Receives Telegram bot updates, verifies Telegram's webhook secret header, links `/start invite_updates_<invite>` chats to invitees, runs visitor discovery from `/start discover_<handle>` with Twilio-backed phone verification before invite links, and lets linked hosts accept/decline invites plus toggle public/discovery availability. | Local code and tests are in repo; deployed manually from CLI. |
 | `create-telegram-link` | Authenticated host endpoint that creates a short-lived Telegram host-link payload for Settings. | Local code and tests are in repo; deploy with default JWT verification. |
+| `set-telegram-host-notifications` | Authenticated host endpoint that enables or pauses invite notifications for an already linked Telegram host chat. | Local code and tests are in repo; deploy with default JWT verification. |
 | `accept-invite` | Authenticated host endpoint that accepts/declines invites, creates the date on accept, and notifies a Telegram-linked visitor. | Local code and tests are in repo; deployed manually from CLI with default JWT verification. |
 | `submit-invite` | Public invite submission endpoint that validates schedule/slot/link, server-checks mock or Twilio phone verification, blocks duplicate pending invites, and creates invitee + invite records with the service role key. | Local code and tests are in repo; deploy before applying the direct-browser-write RLS cleanup migration. |
 | `send-phone-otp` | Starts Twilio Verify SMS OTP for supported visitor phone numbers, with an optional server-only static-code QA challenge for fake/unsupported E.164 numbers. | Local code and tests are in repo; deploy after Twilio secrets are set. |
@@ -159,6 +160,7 @@ Useful commands:
 ```sh
 deno test supabase/functions/telegram-webhook/handler.test.ts
 deno test supabase/functions/create-telegram-link/handler.test.ts
+deno test supabase/functions/set-telegram-host-notifications/handler.test.ts
 deno test supabase/functions/accept-invite/handler.test.ts
 deno test supabase/functions/submit-invite/handler.test.ts
 deno test supabase/functions/send-phone-otp/handler.test.ts
@@ -169,6 +171,7 @@ supabase secrets set PHONE_VERIFICATION_TEST_CODE=...
 supabase db push
 supabase functions deploy telegram-webhook --no-verify-jwt
 supabase functions deploy create-telegram-link
+supabase functions deploy set-telegram-host-notifications
 supabase functions deploy accept-invite
 supabase functions deploy submit-invite --no-verify-jwt
 supabase functions deploy send-phone-otp
