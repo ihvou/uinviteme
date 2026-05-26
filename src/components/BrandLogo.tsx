@@ -9,9 +9,9 @@ interface BrandLogoProps {
 }
 
 const markSizes = {
-  sm: "h-6 w-6",
-  md: "h-7 w-7",
-  lg: "h-8 w-8",
+  sm: "h-12 w-12",
+  md: "h-14 w-14",
+  lg: "h-16 w-16",
 };
 
 const textSizes = {
