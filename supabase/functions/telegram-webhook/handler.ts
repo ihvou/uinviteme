@@ -15,6 +15,7 @@ const INVITE_PROFILE_LABEL = "Invite";
 const SKIP_PROFILE_LABEL = "Skip";
 const CHANGE_CITY_LABEL = "Change city";
 const CANCEL_LABEL = "Cancel";
+const BACK_LABEL = "Back";
 const SHARE_PHONE_LABEL = "Share phone number";
 const HOST_SETTINGS_LABEL = "Host settings";
 const HOST_PROFILE_LABEL = "My profile";
@@ -306,6 +307,10 @@ export async function handleTelegramUpdate(
   }
 
   const session = await getDiscoverySession(env, fetcher, chatId);
+
+  if (text.toLowerCase() === BACK_LABEL.toLowerCase()) {
+    return await handleBackMessage(env, fetcher, chatId, username, session);
+  }
 
   if (text.toLowerCase() === CANCEL_LABEL.toLowerCase()) {
     await saveDiscoverySession(env, fetcher, chatId, {
@@ -765,6 +770,49 @@ async function sendHostWebLinkForChat(
       ? "host_pending_invites_link"
       : "host_dates_link",
   };
+}
+
+async function handleBackMessage(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  chatId: string,
+  username: string | null,
+  session: DiscoverySessionRecord | null,
+) {
+  await saveDiscoverySession(env, fetcher, chatId, {
+    telegram_username: username ?? session?.telegram_username ?? null,
+    current_profile_id: null,
+    current_profile_handle: null,
+    pending_profile_id: null,
+    pending_profile_handle: null,
+    phone_verification_code: null,
+  });
+
+  const connection = await getHostTelegramConnectionByChat(
+    env,
+    fetcher,
+    chatId,
+  );
+
+  if (connection?.user_id) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "Back to main menu.",
+      hostMainKeyboard(),
+    );
+    return { ok: true, action: "back_to_host_menu" };
+  }
+
+  await sendTelegramMessage(
+    env,
+    fetcher,
+    chatId,
+    "Back to browsing menu.",
+    browseProfilesKeyboard(),
+  );
+  return { ok: true, action: "back_to_browse_menu" };
 }
 
 async function handleHostVisibilityCallback(
@@ -2295,7 +2343,10 @@ function browseProfilesKeyboard() {
 
 function discoveryKeyboard() {
   return {
-    keyboard: [[{ text: BROWSE_PROFILES_LABEL }, { text: CHANGE_CITY_LABEL }]],
+    keyboard: [
+      [{ text: BROWSE_PROFILES_LABEL }, { text: CHANGE_CITY_LABEL }],
+      [{ text: BACK_LABEL }],
+    ],
     resize_keyboard: true,
   };
 }
@@ -2304,7 +2355,7 @@ function profileActionKeyboard() {
   return {
     keyboard: [
       [{ text: INVITE_PROFILE_LABEL }, { text: SKIP_PROFILE_LABEL }],
-      [{ text: CHANGE_CITY_LABEL }],
+      [{ text: CHANGE_CITY_LABEL }, { text: BACK_LABEL }],
     ],
     resize_keyboard: true,
   };

@@ -333,6 +333,61 @@ Deno.test("handleTelegramUpdate sends host web links for linked hosts", async ()
   }
 });
 
+Deno.test("handleTelegramUpdate returns linked hosts from discovery to main menu", async () => {
+  const mock = createMockFetcher();
+  mock.telegramConnections.push({
+    user_id: ORIGIN_ID,
+    telegram_chat_id: CHAT_ID,
+    telegram_username: "HostUser",
+    is_active: true,
+  });
+  mock.discoverySessions.push({
+    telegram_chat_id: CHAT_ID,
+    telegram_username: "HostUser",
+    origin_handle: "codex96910493",
+    current_profile_id: "profile-maya",
+    current_profile_handle: "maya",
+    pending_profile_id: "profile-maya",
+    pending_profile_handle: "maya",
+    phone_verification_code: "123456",
+  });
+
+  const result = await handleTelegramUpdate(
+    {
+      message: {
+        text: "Back",
+        chat: { id: CHAT_ID },
+        from: { username: "HostUser" },
+      },
+    },
+    env(),
+    mock.fetcher as typeof fetch,
+  );
+
+  if (result.action !== "back_to_host_menu") {
+    throw new Error(`unexpected action: ${JSON.stringify(result)}`);
+  }
+
+  const session = mock.discoverySessions[0];
+  if (
+    session.current_profile_id !== null ||
+    session.pending_profile_id !== null ||
+    session.phone_verification_code !== null
+  ) {
+    throw new Error("Back did not clear transient discovery state");
+  }
+
+  const telegramBody = mock.lastTelegramBody();
+  if (
+    telegramBody.reply_markup?.keyboard?.[0]?.[0]?.text !== "My profile" ||
+    telegramBody.reply_markup?.keyboard?.[0]?.[1]?.text !==
+      "Pending invites" ||
+    telegramBody.reply_markup?.keyboard?.[1]?.[0]?.text !== "My dates"
+  ) {
+    throw new Error("Back did not restore host main keyboard");
+  }
+});
+
 Deno.test("handleTelegramUpdate starts discovery and shows one eligible profile", async () => {
   const mock = createMockFetcher();
 
@@ -368,7 +423,10 @@ Deno.test("handleTelegramUpdate starts discovery and shows one eligible profile"
   if (!telegramBody.caption.includes("Tuesday, early evening")) {
     throw new Error("profile message did not include readable schedule");
   }
-  if (telegramBody.reply_markup?.keyboard?.[0]?.[0]?.text !== "Invite") {
+  if (
+    telegramBody.reply_markup?.keyboard?.[0]?.[0]?.text !== "Invite" ||
+    telegramBody.reply_markup?.keyboard?.[1]?.[1]?.text !== "Back"
+  ) {
     throw new Error("profile message did not include Invite action");
   }
 
