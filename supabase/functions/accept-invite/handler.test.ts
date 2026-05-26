@@ -46,6 +46,15 @@ Deno.test("acceptInvite accepts invite, creates date, and notifies linked visito
     throw new Error("Telegram message did not include accepted copy");
   }
 
+  if (
+    telegramBody.parse_mode !== "HTML" ||
+    !telegramBody.text.includes(
+      '<a href="https://instagram.com/codexhost">@codexhost</a>',
+    )
+  ) {
+    throw new Error("Telegram message did not link Instagram contact");
+  }
+
   const notificationLog = calls.find((call) =>
     call.url.endsWith("/rest/v1/notification_log") &&
     call.init?.method === "POST"
@@ -92,6 +101,9 @@ Deno.test("acceptInvite shares linked host Telegram username when selected", asy
   const telegramBody = JSON.parse(telegramCall.init.body.toString());
   if (!telegramBody.text.includes("Contact: Telegram @codexhost")) {
     throw new Error("Telegram contact was not shared on acceptance");
+  }
+  if (telegramBody.parse_mode !== "HTML") {
+    throw new Error("Telegram contact message should use HTML parse mode");
   }
 });
 

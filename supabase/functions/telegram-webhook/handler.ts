@@ -17,6 +17,8 @@ const CHANGE_CITY_LABEL = "Change city";
 const CANCEL_LABEL = "Cancel";
 const SHARE_PHONE_LABEL = "Share phone number";
 const HOST_SETTINGS_LABEL = "Host settings";
+const HOST_PROFILE_LABEL = "My profile";
+const VIEW_ACCEPTED_INVITES_LABEL = "View accepted invites";
 const PHONE_CODE_REGEX = /^\d{4,10}$/;
 const SLOT_CALLBACK_PREFIX = "slot:";
 const HOST_ACCEPT_CALLBACK_PREFIX = "host_accept:";
@@ -372,6 +374,10 @@ export async function handleTelegramUpdate(
     return await sendHostAdminMenuForChat(env, fetcher, chatId);
   }
 
+  if (isViewAcceptedInvitesText(text)) {
+    return await sendAcceptedInvitesLinkForChat(env, fetcher, chatId);
+  }
+
   if (text.toLowerCase() === SKIP_PROFILE_LABEL.toLowerCase()) {
     return await skipCurrentProfile(env, fetcher, chatId);
   }
@@ -683,6 +689,14 @@ async function sendHostAdminMenu(
     env,
     fetcher,
     chatId,
+    "Host shortcuts are ready below.",
+    hostMainKeyboard(),
+  );
+
+  await sendTelegramMessage(
+    env,
+    fetcher,
+    chatId,
     formatHostSettingsText(env, profile, intro),
     hostVisibilityKeyboard(profile),
   );
@@ -693,6 +707,45 @@ async function sendHostAdminMenu(
     publicProfileEnabled: profile.public_profile_enabled ?? true,
     discoveryEnabled: profile.discovery_enabled ?? true,
   };
+}
+
+async function sendAcceptedInvitesLinkForChat(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  chatId: string,
+) {
+  const connection = await getHostTelegramConnectionByChat(
+    env,
+    fetcher,
+    chatId,
+  );
+
+  if (!connection?.user_id) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "Link your host account from Settings before opening host invites here.",
+      removeKeyboard(),
+    );
+    return { ok: true, action: "host_not_linked" };
+  }
+
+  const base = env.publicSiteUrl.replace(/\/+$/, "");
+  await sendTelegramMessage(
+    env,
+    fetcher,
+    chatId,
+    [
+      "Accepted invites are in your web dashboard.",
+      "",
+      `Dates: ${base}/dates`,
+      `Invite queue: ${base}/invites`,
+    ].join("\n"),
+    hostMainKeyboard(),
+  );
+
+  return { ok: true, action: "host_accepted_invites_link" };
 }
 
 async function handleHostVisibilityCallback(
@@ -826,7 +879,7 @@ async function handleHostInviteDecision(
       decision === "accepted"
         ? "Invite accepted. The date was added to your dashboard."
         : "Invite declined. It was removed from your pending queue.",
-      removeKeyboard(),
+      hostMainKeyboard(),
     );
 
     return {
@@ -843,7 +896,7 @@ async function handleHostInviteDecision(
       error instanceof Error && error.message === "Forbidden"
         ? "I couldn't update this invite because it belongs to another host account."
         : "I couldn't update this invite. Please try from the web dashboard.",
-      removeKeyboard(),
+      hostMainKeyboard(),
     );
 
     return {
@@ -2258,6 +2311,17 @@ function phoneRequestKeyboard() {
   };
 }
 
+function hostMainKeyboard() {
+  return {
+    keyboard: [
+      [{ text: HOST_PROFILE_LABEL }, { text: VIEW_ACCEPTED_INVITES_LABEL }],
+      [{ text: BROWSE_PROFILES_LABEL }],
+    ],
+    resize_keyboard: true,
+    is_persistent: true,
+  };
+}
+
 function hostVisibilityKeyboard(profile: HostVisibilityProfileRecord) {
   return {
     inline_keyboard: [
@@ -2294,6 +2358,7 @@ function formatHostSettingsText(
   const discoveryEnabled = profile.discovery_enabled !== false;
   const publicStatus = publicProfileEnabled ? "On" : "Off";
   const discoveryStatus = discoveryEnabled ? "On" : "Off";
+  const base = env.publicSiteUrl.replace(/\/+$/, "");
   const publicUrl = profile.handle ? profileUrl(env, profile.handle) : null;
   const lines = [
     intro,
@@ -2301,6 +2366,9 @@ function formatHostSettingsText(
     `Public profile: ${publicStatus}`,
     publicUrl && publicProfileEnabled ? `Public link: ${publicUrl}` : null,
     `Discovery: ${discoveryStatus}`,
+    "",
+    `Update profile: ${base}/settings`,
+    `Accepted invites: ${base}/dates`,
     "",
     "Tap a button below to toggle availability.",
   ].filter(Boolean);
@@ -2345,8 +2413,15 @@ function isLikelyPhoneText(text: string) {
 function isHostSettingsText(text: string) {
   const normalized = text.trim().toLowerCase();
   return normalized === HOST_SETTINGS_LABEL.toLowerCase() ||
+    normalized === HOST_PROFILE_LABEL.toLowerCase() ||
     normalized === "/settings" ||
     normalized === "/admin";
+}
+
+function isViewAcceptedInvitesText(text: string) {
+  const normalized = text.trim().toLowerCase();
+  return normalized === VIEW_ACCEPTED_INVITES_LABEL.toLowerCase() ||
+    normalized === "/dates";
 }
 
 function normalizePhone(phone: string) {

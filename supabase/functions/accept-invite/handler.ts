@@ -7,6 +7,7 @@ const CORS_HEADERS = {
 
 type Fetcher = typeof fetch;
 type Decision = "accepted" | "declined";
+type TelegramParseMode = "HTML";
 
 export interface AcceptInviteEnv {
   supabaseUrl: string;
@@ -351,6 +352,7 @@ async function notifyVisitorIfLinked(
       fetcher,
       connection.telegram_chat_id,
       text,
+      "HTML",
     );
 
     await logNotification(env, fetcher, {
@@ -396,8 +398,10 @@ function buildAcceptedMessage(data: {
   const areaLabel = data.slot.area_label;
 
   return [
-    `Good news — ${hostName} accepted your invite.`,
-    `Plan: ${dateLabel}, ${data.slot.time_bucket} near ${areaLabel}.`,
+    `Good news — ${escapeHtml(hostName)} accepted your invite.`,
+    `Plan: ${escapeHtml(dateLabel)}, ${
+      escapeHtml(data.slot.time_bucket)
+    } near ${escapeHtml(areaLabel)}.`,
     contact,
   ].join("\n\n");
 }
@@ -410,15 +414,15 @@ function getAcceptedContact(
 
   if (profile.accepted_contact_channel === "instagram") {
     if (profile.instagram_handle) {
-      return `Contact: Instagram @${
-        profile.instagram_handle.replace(/^@+/, "")
-      }`;
+      return `Contact: Instagram ${instagramHtmlLink(profile.instagram_handle)}`;
     }
     return "Contact: Instagram selected, but the host has not added a handle yet.";
   }
 
   if (hostTelegramUsername) {
-    return `Contact: Telegram @${hostTelegramUsername.replace(/^@+/, "")}`;
+    return `Contact: Telegram @${
+      escapeHtml(normalizeSocialHandle(hostTelegramUsername))
+    }`;
   }
 
   return "Contact: Telegram selected. The host can message you here.";
@@ -445,6 +449,7 @@ async function sendTelegramMessage(
   fetcher: Fetcher,
   chatId: string,
   text: string,
+  parseMode?: TelegramParseMode,
 ) {
   const response = await fetcher(
     `${
@@ -457,6 +462,7 @@ async function sendTelegramMessage(
         chat_id: chatId,
         text,
         disable_web_page_preview: true,
+        ...(parseMode ? { parse_mode: parseMode } : {}),
         reply_markup: { remove_keyboard: true },
       }),
     },
@@ -470,6 +476,23 @@ async function sendTelegramMessage(
   }
 
   return await response.json() as TelegramSendResult;
+}
+
+function normalizeSocialHandle(value: string) {
+  return value.trim().replace(/^@+/, "");
+}
+
+function instagramHtmlLink(value: string) {
+  const handle = normalizeSocialHandle(value);
+  const url = `https://instagram.com/${encodeURIComponent(handle)}`;
+  return `<a href="${url}">@${escapeHtml(handle)}</a>`;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 async function logNotification(

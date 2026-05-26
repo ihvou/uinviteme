@@ -111,6 +111,7 @@ Deno.test("submitInvite notifies linked host in Telegram", async () => {
 
   const telegramBody = mock.telegramMessages[0] as {
     text?: string;
+    parse_mode?: string;
     reply_markup?: {
       inline_keyboard?: Array<Array<{ callback_data?: string }>>;
     };
@@ -119,6 +120,15 @@ Deno.test("submitInvite notifies linked host in Telegram", async () => {
     throw new Error(
       "Host Telegram notification did not include invite details",
     );
+  }
+
+  if (
+    telegramBody.parse_mode !== "HTML" ||
+    !telegramBody.text.includes(
+      '<a href="https://instagram.com/sam">@sam</a>',
+    )
+  ) {
+    throw new Error("Host Telegram notification did not link Instagram");
   }
 
   if (

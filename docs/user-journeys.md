@@ -147,7 +147,8 @@ Status: Implemented as Telegram admin MVP.
 | 2 | System | New invite arrives. | Host gets Telegram message with invite summary and inline Accept/Decline buttons. |
 | 3 | Host | Taps Accept or Decline. | Bot callback reuses trusted `accept-invite` backend logic for both decisions. |
 | 4 | System | Updates invite lifecycle. | Pending invite is removed; accepted invite becomes a date; opted-in visitor is notified. |
-| 5 | Host | Uses `/start`, `/settings`, `/admin`, or the post-link menu to toggle availability. | Bot updates `public_profile_enabled` and `discovery_enabled`; the web Settings page reflects the same state. |
+| 5 | Host | Uses `/start`, `/settings`, `/admin`, or the persistent host keyboard to open profile controls, view accepted-invite links, or browse nearby profiles. | Bot keeps host shortcuts available after linking and invite decisions; profile controls include public profile link plus web Settings/Dates links. |
+| 6 | Host | Toggles availability from profile controls. | Bot updates `public_profile_enabled` and `discovery_enabled`; the web Settings page reflects the same state. |
 
 Success condition: a linked host can review invites, accept/decline them, and quickly hide or show public/discovery availability from Telegram without opening the web dashboard.
 
@@ -159,7 +160,7 @@ Status: Implemented as MVP.
 |---:|---|---|---|
 | 1 | Host | Sets accepted-contact method in profile. | Host chooses `telegram` or `instagram`; host phone is not shared by default. |
 | 2 | Host | Accepts invite. | `accept-invite` resolves the host-approved contact payload. |
-| 3 | System | Notifies opted-in visitor. | Telegram notification includes only the selected host contact method. |
+| 3 | System | Notifies opted-in visitor. | Telegram notification includes only the selected host contact method; Instagram contacts render as `instagram.com` links, while Telegram handles remain native `@handle` mentions. |
 
 Success condition: accepted invite notifications share exactly the contact method the host selected.
 

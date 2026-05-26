@@ -163,8 +163,8 @@ Implemented:
 
 - `/start invite_updates_<invite>` links a visitor Telegram chat to the invitee for that submitted invite.
 - `/start discover_<handle>` starts visitor discovery from the origin profile city, shows one eligible public active discovery-enabled profile at a time, records view/skip/invite events, accepts manual `City: Singapore` context, accepts Telegram native location context, and gates the first Telegram-origin invite link behind Twilio Verify SMS.
-- `/start host_<token>` links a host chat, then `/start`, `/settings`, or `/admin` shows host controls for public profile visibility and discovery visibility.
-- `accept-invite` sends the visitor a Telegram message when the host accepts and the visitor linked Telegram.
+- `/start host_<token>` links a host chat, then `/start`, `/settings`, `/admin`, or the persistent host keyboard shows profile links, accepted-invite web links, public profile visibility, and discovery visibility controls.
+- `accept-invite` sends the visitor a Telegram message when the host accepts and the visitor linked Telegram; Instagram contact details are sent as `instagram.com` links and Telegram handles remain native mentions.
 - `send-phone-otp` and `verify-phone-otp` provide Twilio Verify-backed phone verification primitives for the web invite wizard when `VITE_PHONE_VERIFICATION_MODE=twilio`. A server-only `PHONE_VERIFICATION_TEST_CODE` can be enabled for QA so fake/unsupported E.164 numbers create a no-SMS challenge and the fixed code is accepted alongside real Twilio checks.
 
 Next bot features:

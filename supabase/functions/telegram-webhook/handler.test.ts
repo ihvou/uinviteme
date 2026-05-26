@@ -125,6 +125,18 @@ Deno.test("handleTelegramUpdate links host Telegram admin", async () => {
   ) {
     throw new Error("host link confirmation did not include public toggle");
   }
+
+  const shortcutBody = mock.telegramBodies().find((body) =>
+    body.reply_markup?.keyboard?.[0]?.[0]?.text === "My profile"
+  );
+  if (
+    shortcutBody?.reply_markup?.keyboard?.[0]?.[1]?.text !==
+      "View accepted invites" ||
+    shortcutBody?.reply_markup?.keyboard?.[1]?.[0]?.text !==
+      "Browse profiles nearby"
+  ) {
+    throw new Error("host shortcut keyboard was not sent");
+  }
 });
 
 Deno.test("handleTelegramUpdate lets linked host manage visibility", async () => {
@@ -230,6 +242,48 @@ Deno.test("handleTelegramUpdate lets linked host accept invite", async () => {
   const telegramBody = mock.lastTelegramBody();
   if (!telegramBody.text.includes("Invite accepted")) {
     throw new Error("host accept confirmation was not sent");
+  }
+
+  if (
+    telegramBody.reply_markup?.keyboard?.[0]?.[0]?.text !== "My profile" ||
+    telegramBody.reply_markup?.keyboard?.[0]?.[1]?.text !==
+      "View accepted invites"
+  ) {
+    throw new Error("host accept confirmation did not keep host shortcuts");
+  }
+});
+
+Deno.test("handleTelegramUpdate sends accepted invites web links for linked hosts", async () => {
+  const mock = createMockFetcher();
+  mock.telegramConnections.push({
+    user_id: ORIGIN_ID,
+    telegram_chat_id: CHAT_ID,
+    telegram_username: "HostUser",
+    is_active: true,
+  });
+
+  const result = await handleTelegramUpdate(
+    {
+      message: {
+        text: "View accepted invites",
+        chat: { id: CHAT_ID },
+        from: { username: "HostUser" },
+      },
+    },
+    env(),
+    mock.fetcher as typeof fetch,
+  );
+
+  if (result.action !== "host_accepted_invites_link") {
+    throw new Error(`unexpected action: ${JSON.stringify(result)}`);
+  }
+
+  const telegramBody = mock.lastTelegramBody();
+  if (
+    !telegramBody.text.includes("https://uinvite.me/dates") ||
+    !telegramBody.text.includes("https://uinvite.me/invites")
+  ) {
+    throw new Error("accepted invite links were not sent");
   }
 });
 
@@ -889,6 +943,11 @@ function createMockFetcher() {
         item.url.includes(method)
       );
       return JSON.parse(call?.init?.body?.toString() || "{}");
+    },
+    telegramBodies(method = "/sendMessage") {
+      return calls
+        .filter((item) => item.url.includes(method))
+        .map((item) => JSON.parse(item.init?.body?.toString() || "{}"));
     },
   };
 }

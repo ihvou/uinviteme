@@ -7,6 +7,7 @@ import {
 } from "../_shared/supabaseRest.ts";
 
 type PhoneVerificationMode = "mock" | "twilio";
+type TelegramParseMode = "HTML";
 
 export interface SubmitInviteEnv extends SupabaseServiceEnv {
   phoneVerificationMode: PhoneVerificationMode;
@@ -465,6 +466,7 @@ async function notifyHostIfLinked(
       connection.telegram_chat_id,
       formatHostInviteNotification(data),
       hostInviteDecisionKeyboard(data.inviteId),
+      "HTML",
     );
 
     return { attempted: true, sent: true };
@@ -483,6 +485,7 @@ async function sendTelegramMessage(
   chatId: string,
   text: string,
   replyMarkup?: Record<string, unknown>,
+  parseMode?: TelegramParseMode,
 ) {
   const response = await fetcher(
     `${
@@ -495,6 +498,7 @@ async function sendTelegramMessage(
         chat_id: chatId,
         text,
         disable_web_page_preview: true,
+        ...(parseMode ? { parse_mode: parseMode } : {}),
         ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
       }),
     },
@@ -518,24 +522,43 @@ function formatHostInviteNotification(data: {
   targetDate: string;
 }) {
   const contacts = [
-    data.inviteePhone ? `Phone: ${data.inviteePhone}` : null,
+    data.inviteePhone ? `Phone: ${escapeHtml(data.inviteePhone)}` : null,
     data.inviteeInstagram
-      ? `Instagram: @${data.inviteeInstagram.replace(/^@+/, "")}`
+      ? `Instagram: ${instagramHtmlLink(data.inviteeInstagram)}`
       : null,
     data.inviteeTelegram
-      ? `Telegram: @${data.inviteeTelegram.replace(/^@+/, "")}`
+      ? `Telegram: @${escapeHtml(normalizeSocialHandle(data.inviteeTelegram))}`
       : null,
   ].filter(Boolean);
 
   return [
-    `New invite from ${data.inviteeName}`,
-    `When: ${data.targetDate}, ${timeBucketLabel(data.slot.time_bucket)}`,
-    `Where: ${data.slot.area_label || "Area TBD"}`,
+    `New invite from ${escapeHtml(data.inviteeName)}`,
+    `When: ${escapeHtml(data.targetDate)}, ${
+      escapeHtml(timeBucketLabel(data.slot.time_bucket))
+    }`,
+    `Where: ${escapeHtml(data.slot.area_label || "Area TBD")}`,
     contacts.length > 0 ? contacts.join("\n") : null,
-    data.inviteeNote ? `Note: ${data.inviteeNote}` : null,
+    data.inviteeNote ? `Note: ${escapeHtml(data.inviteeNote)}` : null,
     "",
     "Review it here or use the buttons below.",
   ].filter((line) => line !== null).join("\n");
+}
+
+function normalizeSocialHandle(value: string) {
+  return value.trim().replace(/^@+/, "");
+}
+
+function instagramHtmlLink(value: string) {
+  const handle = normalizeSocialHandle(value);
+  const url = `https://instagram.com/${encodeURIComponent(handle)}`;
+  return `<a href="${url}">@${escapeHtml(handle)}</a>`;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function hostInviteDecisionKeyboard(inviteId: string) {
