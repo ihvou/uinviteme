@@ -30,10 +30,10 @@ export function BrandLogo({
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
       <img
-        src="/logo.svg"
+        src="/logo.png"
         alt=""
         aria-hidden="true"
-        className={cn(markSizes[size], "shrink-0", markClassName)}
+        className={cn(markSizes[size], "shrink-0 object-contain", markClassName)}
       />
       {showText && (
         <span
