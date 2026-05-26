@@ -1,25 +1,28 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="112" fill="white"/>
   <defs>
-    <linearGradient id="mark" x1="256" y1="84" x2="256" y2="428" gradientUnits="userSpaceOnUse">
+    <linearGradient id="calendarGradient" x1="256" y1="106" x2="256" y2="406" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#7C3FA8"/>
-      <stop offset="0.48" stop-color="#CC2F79"/>
+      <stop offset="0.47" stop-color="#CC2F79"/>
       <stop offset="1" stop-color="#F12D59"/>
     </linearGradient>
-    <linearGradient id="shine" x1="128" y1="112" x2="376" y2="420" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="white" stop-opacity="0.26"/>
-      <stop offset="1" stop-color="white" stop-opacity="0"/>
+    <linearGradient id="surfaceLight" x1="132" y1="128" x2="383" y2="406" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <path d="M124 122C124 91.1 149.1 66 180 66H332C362.9 66 388 91.1 388 122V142H124V122Z" fill="url(#mark)"/>
-  <path d="M124 174H388V342C388 398.3 342.3 444 286 444H226C169.7 444 124 398.3 124 342V174Z" fill="url(#mark)"/>
-  <path d="M124 174H388V342C388 398.3 342.3 444 286 444H226C169.7 444 124 398.3 124 342V174Z" fill="url(#shine)"/>
-  <rect x="181" y="54" width="24" height="58" rx="12" fill="white"/>
-  <rect x="307" y="54" width="24" height="58" rx="12" fill="white"/>
-  <rect x="124" y="146" width="264" height="28" fill="white"/>
-  <circle cx="219" cy="250" r="44" stroke="white" stroke-width="22"/>
-  <path d="M139 356C139 315.7 174.8 286 219 286C253.2 286 282.2 303.8 294.3 331.2" stroke="white" stroke-width="22" stroke-linecap="round"/>
-  <circle cx="314" cy="285" r="38" stroke="white" stroke-width="20"/>
-  <path d="M262 373C275.8 342.7 302.9 327 335 327C368.6 327 397 349.4 405 379" stroke="white" stroke-width="20" stroke-linecap="round"/>
-  <path d="M206 356H258M232 330V382" stroke="white" stroke-width="20" stroke-linecap="round"/>
+
+  <path d="M106 154C106 127.49 127.49 106 154 106H358C384.51 106 406 127.49 406 154V164H106V154Z" fill="url(#calendarGradient)"/>
+  <path d="M106 180H406V334C406 373.76 373.76 406 334 406H178C138.24 406 106 373.76 106 334V180Z" fill="url(#calendarGradient)"/>
+  <path d="M106 180H406V334C406 373.76 373.76 406 334 406H178C138.24 406 106 373.76 106 334V180Z" fill="url(#surfaceLight)"/>
+
+  <rect x="181" y="106" width="20" height="38" rx="10" fill="#FFFFFF"/>
+  <rect x="311" y="106" width="20" height="38" rx="10" fill="#FFFFFF"/>
+
+  <circle cx="227" cy="235" r="34" stroke="#FFFFFF" stroke-width="18"/>
+  <path d="M162 313C162 277.25 190.65 254 227 254C263.1 254 291.56 277.46 300 311" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"/>
+
+  <circle cx="317" cy="281" r="32" stroke="#FFFFFF" stroke-width="17"/>
+  <path d="M263 367C276.53 336.67 306.08 319 341 319C374.24 319 400.43 340.6 408 371" stroke="#FFFFFF" stroke-width="17" stroke-linecap="round"/>
+
+  <path d="M203 355H257M230 328V382" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"/>
 </svg>
