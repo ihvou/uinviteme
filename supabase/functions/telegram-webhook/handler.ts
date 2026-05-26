@@ -1201,7 +1201,9 @@ async function handlePhoneNumberMessage(
     env,
     fetcher,
     chatId,
-    `SMS sent to ${otp.phoneE164}. Reply with the code to verify.`,
+    otp.deliveryMode === "test_static_code"
+      ? `Phone challenge ready for ${otp.phoneE164}. Reply with the test verification code.`
+      : `SMS sent to ${otp.phoneE164}. Reply with the code to verify.`,
     removeKeyboard(),
   );
 
@@ -1458,6 +1460,8 @@ function readEnv(): TelegramWebhookEnv {
   const twilioVerifyServiceSid = requiredEnv("TWILIO_VERIFY_SERVICE_SID");
   const twilioVerifyApiBaseUrl = Deno.env.get("TWILIO_VERIFY_API_BASE_URL") ||
     "https://verify.twilio.com/v2";
+  const phoneVerificationTestCode = Deno.env.get("PHONE_VERIFICATION_TEST_CODE")
+    ?.trim() || null;
 
   return {
     supabaseUrl,
@@ -1470,6 +1474,7 @@ function readEnv(): TelegramWebhookEnv {
     twilioAuthToken,
     twilioVerifyServiceSid,
     twilioVerifyApiBaseUrl,
+    phoneVerificationTestCode,
   };
 }
 

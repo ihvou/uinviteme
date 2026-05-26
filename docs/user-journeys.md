@@ -106,7 +106,7 @@ These scenarios describe the notification, SMS, and Telegram phases. Each scenar
 
 ### Scenario 6: Visitor Submits Invite On Web With SMS Verification
 
-Status: Partially implemented. The web wizard uses trusted `submit-invite`; mock phone verification works today and Twilio-backed SMS verification is available once Twilio secrets and migrations are active.
+Status: Partially implemented. The web wizard uses trusted `submit-invite`; mock phone verification works locally, Twilio-backed SMS verification is available when Twilio mode is enabled, and a server-only static test code can be enabled for QA.
 
 Telegram is not required before invite submission. The visitor should be able to complete the web invite flow with SMS-verified phone only.
 
@@ -114,15 +114,15 @@ Telegram is not required before invite submission. The visitor should be able to
 |---:|---|---|---|
 | 1 | Visitor | Opens `/:handle` or `/i/:token`. | App loads the host profile, active schedule, available slot, and screening config. |
 | 2 | Visitor | Chooses a slot and enters contact details. | Web wizard collects name, phone, optional Instagram/email/Telegram username, answers, and note. |
-| 3 | Visitor | Requests SMS verification code. | Current default: web wizard shows/sends test code `123456`. With Twilio mode enabled: `send-phone-otp` sends an OTP to UAE, Turkey, Singapore, or Ukraine phone number via Twilio Verify. |
-| 4 | Visitor | Enters OTP in the web wizard. | Current default: correct test code marks phone verified locally. With Twilio mode enabled: `verify-phone-otp` checks Twilio Verify and marks the phone challenge verified server-side. |
+| 3 | Visitor | Requests SMS verification code. | Current default: web wizard shows/sends test code `123456`. With Twilio mode enabled: `send-phone-otp` sends an OTP to UAE, Turkey, Singapore, or Ukraine phone number via Twilio Verify. If `PHONE_VERIFICATION_TEST_CODE` is configured server-side, unsupported/fake E.164 numbers create a no-SMS test challenge instead. |
+| 4 | Visitor | Enters OTP in the web wizard. | Current default: correct test code marks phone verified locally. With Twilio mode enabled: `verify-phone-otp` checks Twilio Verify and marks the phone challenge verified server-side. If `PHONE_VERIFICATION_TEST_CODE` is configured, that code is also accepted as a QA override. |
 | 5 | Visitor | Submits invite. | `submit-invite` validates slot/date/link, re-checks mock code or approved Twilio verification reference, enforces one pending invite per verified phone per host, and creates invitee + invite server-side. |
 | 6 | System | Checks duplicate rule. | One active pending invite per verified phone per host is enforced. |
 | 7 | System | Shows success screen. | Visitor sees confirmation plus "Enable Telegram notifications to know when your invite is accepted." |
 
 Success condition: a visitor can submit a real invite without Telegram, but cannot submit without verified phone or create duplicate pending invites for the same host.
 
-Current caveat: Twilio-backed mode still needs Twilio secrets, remote migrations, and production activation; default mock mode is for local/staging only.
+Current caveat: Twilio-backed mode needs Twilio secrets, remote migrations, deployed phone verification functions, and production activation. The static server-side test code is for manual QA only and should never be exposed as a frontend variable.
 
 ### Scenario 7: Visitor Enables Telegram Notifications After Invite
 

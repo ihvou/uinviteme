@@ -62,6 +62,8 @@ The webhook validates Telegram's secret header, maps visitor invite-update start
 
 Twilio is the MVP SMS provider decision: Twilio Verify for visitor OTP and Twilio Programmable Messaging for Safety Pack trusted-contact alerts. Keep Twilio credentials in Supabase Function Secrets only.
 
+`PHONE_VERIFICATION_TEST_CODE` is an optional Supabase Function Secret for manual QA. It lets phone verification accept one fixed code and create no-SMS challenges for fake/unsupported E.164 numbers; never expose it through Vite frontend env.
+
 ## Before Finalizing Work
 
 For code changes, run:

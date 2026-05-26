@@ -60,6 +60,7 @@ Supabase Edge Functions are now part of the repo for trusted backend slices:
 - `supabase/functions/create-telegram-link` creates short-lived host Telegram link tokens from authenticated Settings sessions.
 - `supabase/functions/accept-invite` handles authenticated host accept/decline decisions and visitor Telegram notifications.
 - `supabase/functions/submit-invite` handles public invite submission, server-side mock/Twilio phone verification checks, duplicate pending invite prevention, and invite creation.
+- `supabase/functions/send-phone-otp` and `supabase/functions/verify-phone-otp` handle Twilio Verify OTP plus the optional server-only `PHONE_VERIFICATION_TEST_CODE` QA override.
 
 Real phone verification activation and Safety Pack escalation still need to move from browser/database state into trusted Edge Functions.
 
@@ -68,6 +69,7 @@ When adding trusted backend behavior:
 - Put Supabase Edge Functions under `supabase/functions/<name>/index.ts`.
 - Keep shared function utilities inside `supabase/functions/_shared` if useful.
 - Use Function Secrets for provider tokens.
+- Keep `PHONE_VERIFICATION_TEST_CODE` in Supabase Function Secrets only; it is for QA and must never be exposed as a `VITE_` variable.
 - Prefer idempotent, transactional logic for invite acceptance and notifications.
 - Twilio is the chosen MVP SMS provider: Verify for visitor OTP and Programmable Messaging for Safety Pack trusted-contact alerts. Keep Twilio behind a server-side provider module.
 

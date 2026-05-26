@@ -243,8 +243,12 @@ export function InviteWizard({
       setPhoneVerified(false);
       setVerifiedPhone('');
       toast({
-        title: 'Verification code sent',
-        description: `We sent an SMS code to ${data.phoneE164 || 'your phone'}.`,
+        title: data.deliveryMode === 'test_static_code'
+          ? 'Test verification ready'
+          : 'Verification code sent',
+        description: data.deliveryMode === 'test_static_code'
+          ? 'Use the test verification code configured for this environment.'
+          : `We sent an SMS code to ${data.phoneE164 || 'your phone'}.`,
       });
       return;
     }

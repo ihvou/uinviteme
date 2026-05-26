@@ -55,6 +55,44 @@ Deno.test("verifyPhoneOtp approves Twilio checks and updates challenge", async (
   }
 });
 
+Deno.test("verifyPhoneOtp approves configured static test code without Twilio", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+
+  const result = await verifyPhoneOtp(
+    {
+      verificationId: "11111111-1111-4111-8111-111111111111",
+      phone: "+65 9123 4567",
+      code: "424242",
+    },
+    { ...env, phoneVerificationTestCode: "424242" },
+    createMockFetcher(calls, { approved: false }) as typeof fetch,
+  );
+
+  if (!result.verified || result.testOverride !== true) {
+    throw new Error(`phone was not test-verified: ${JSON.stringify(result)}`);
+  }
+
+  if (calls.some((call) => call.url.includes("/VerificationCheck"))) {
+    throw new Error("static test code should not call Twilio check");
+  }
+
+  const patch = calls.find((call) =>
+    call.url.includes("/rest/v1/phone_verifications?id=eq.") &&
+    call.init?.method === "PATCH"
+  );
+  if (!patch?.init?.body) {
+    throw new Error("phone verification row was not updated");
+  }
+
+  const row = JSON.parse(patch.init.body.toString());
+  if (
+    row.status !== "approved" ||
+    row.provider_status !== "approved_static_test_code"
+  ) {
+    throw new Error(`unexpected test verification patch: ${JSON.stringify(row)}`);
+  }
+});
+
 Deno.test("verifyPhoneOtp rejects invalid Twilio checks", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
 

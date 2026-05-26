@@ -165,7 +165,7 @@ Implemented:
 - `/start discover_<handle>` starts visitor discovery from the origin profile city, shows one eligible public active discovery-enabled profile at a time, records view/skip/invite events, accepts manual `City: Singapore` context, accepts Telegram native location context, and gates the first Telegram-origin invite link behind Twilio Verify SMS.
 - `/start host_<token>` links a host chat, then `/start`, `/settings`, or `/admin` shows host controls for public profile visibility and discovery visibility.
 - `accept-invite` sends the visitor a Telegram message when the host accepts and the visitor linked Telegram.
-- `send-phone-otp` and `verify-phone-otp` provide Twilio Verify-backed phone verification primitives for the web invite wizard when `VITE_PHONE_VERIFICATION_MODE=twilio`.
+- `send-phone-otp` and `verify-phone-otp` provide Twilio Verify-backed phone verification primitives for the web invite wizard when `VITE_PHONE_VERIFICATION_MODE=twilio`. A server-only `PHONE_VERIFICATION_TEST_CODE` can be enabled for QA so fake/unsupported E.164 numbers create a no-SMS challenge and the fixed code is accepted alongside real Twilio checks.
 
 Next bot features:
 
@@ -198,6 +198,7 @@ Implementation rules:
 - Keep Twilio behind a small server-side SMS provider module so a later Vonage or regional provider fallback is possible.
 - Store Twilio credentials only as Supabase Function Secrets: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SERVICE_SID`, and `TWILIO_MESSAGING_SERVICE_SID` or sender configuration.
 - Never expose Twilio values through Cloudflare frontend variables or any `VITE_` variable.
+- Keep `PHONE_VERIFICATION_TEST_CODE` server-only too. It is a QA override, not a production user-facing feature.
 - Log provider IDs, delivery status, failure reasons, and idempotency keys for OTP and Safety Pack SMS.
 - Treat phone numbers as sensitive personal data. Store only the normalized E.164 value and avoid logging full numbers in function logs.
 
@@ -210,6 +211,7 @@ These rules describe the next implementation phase. See [User Journey Scenarios]
 | Web invite submission | Visitor submits in the web app and must verify phone by SMS before `submit-invite` succeeds. |
 | SMS provider | Twilio is the MVP provider: Verify for OTP, Programmable Messaging for Safety Pack alerts. |
 | Mock phone verification | Current web wizard defaults to a test code unless `VITE_PHONE_VERIFICATION_MODE=twilio` is set; `submit-invite` re-checks the mock code server-side so the browser cannot simply submit `phone_verified=true`. |
+| Static QA phone code | Optional `PHONE_VERIFICATION_TEST_CODE` lives only in Supabase Function Secrets and lets staging/manual QA verify any E.164 test number without depending on Twilio delivery. |
 | Telegram opt-in | Visitor is prompted to enable Telegram notifications after successful invite submission. Telegram is optional for the invite itself. |
 | Duplicate prevention | Enforce one active pending invite per verified phone per host. |
 | Host admin | Linked hosts receive new-invite notifications, can accept/reject in Telegram, and can toggle public profile plus discovery visibility. |

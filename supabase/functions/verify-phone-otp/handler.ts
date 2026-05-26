@@ -11,7 +11,9 @@ import {
 } from "../_shared/twilioVerify.ts";
 
 export interface VerifyPhoneOtpEnv
-  extends SupabaseServiceEnv, TwilioVerifyEnv {}
+  extends SupabaseServiceEnv, TwilioVerifyEnv {
+  phoneVerificationTestCode?: string | null;
+}
 
 interface VerifyPhoneOtpBody {
   verificationId?: string;
@@ -114,6 +116,23 @@ export async function verifyPhoneOtp(
     throw new Error("Too many verification attempts");
   }
 
+  if (env.phoneVerificationTestCode && code === env.phoneVerificationTestCode) {
+    await updatePhoneVerification(env, fetcher, verificationId, {
+      status: "approved",
+      provider_status: "approved_static_test_code",
+      attempt_count: nextAttemptCount,
+      verified_at: new Date().toISOString(),
+      last_error: null,
+    });
+
+    return {
+      ok: true,
+      verified: true,
+      verificationId,
+      testOverride: true,
+    };
+  }
+
   const check = await checkTwilioVerification(env, fetcher, phoneE164, code);
   const approved = check.status === "approved" || check.valid === true;
 
@@ -179,6 +198,8 @@ function readEnv(): VerifyPhoneOtpEnv {
     twilioVerifyServiceSid: requiredEnv("TWILIO_VERIFY_SERVICE_SID"),
     twilioVerifyApiBaseUrl: Deno.env.get("TWILIO_VERIFY_API_BASE_URL") ||
       "https://verify.twilio.com/v2",
+    phoneVerificationTestCode: Deno.env.get("PHONE_VERIFICATION_TEST_CODE")
+      ?.trim() || null,
   };
 }
 

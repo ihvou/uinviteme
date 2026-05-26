@@ -87,6 +87,7 @@ TELEGRAM_WEBHOOK_SECRET=
 PUBLIC_SITE_URL=https://uinvite.me
 PHONE_VERIFICATION_MODE=
 MOCK_PHONE_CODE=
+PHONE_VERIFICATION_TEST_CODE=
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
 TWILIO_VERIFY_SERVICE_SID=
@@ -94,6 +95,8 @@ TWILIO_MESSAGING_SERVICE_SID=
 ```
 
 Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions. Never add `TELEGRAM_BOT_TOKEN`, Twilio secrets, or the service-role key to a `VITE_` variable.
+
+`PHONE_VERIFICATION_TEST_CODE` is an optional server-only QA override. When it is set, the phone verification functions can approve that fixed code alongside normal Twilio OTP checks, and unsupported/fake E.164 numbers can create a test challenge without sending SMS. Do not configure it as a `VITE_` variable.
 
 ## Google Auth
 
@@ -148,8 +151,8 @@ Committed functions:
 | `create-telegram-link` | Authenticated host endpoint that creates a short-lived Telegram host-link payload for Settings. | Local code and tests are in repo; deploy with default JWT verification. |
 | `accept-invite` | Authenticated host endpoint that accepts/declines invites, creates the date on accept, and notifies a Telegram-linked visitor. | Local code and tests are in repo; deployed manually from CLI with default JWT verification. |
 | `submit-invite` | Public invite submission endpoint that validates schedule/slot/link, server-checks mock or Twilio phone verification, blocks duplicate pending invites, and creates invitee + invite records with the service role key. | Local code and tests are in repo; deploy before applying the direct-browser-write RLS cleanup migration. |
-| `send-phone-otp` | Starts Twilio Verify SMS OTP for supported visitor phone numbers. | Local code and tests are in repo; deploy after Twilio secrets are set. |
-| `verify-phone-otp` | Checks Twilio Verify OTP and marks the server-side phone challenge approved. | Local code and tests are in repo; deploy after Twilio secrets are set. |
+| `send-phone-otp` | Starts Twilio Verify SMS OTP for supported visitor phone numbers, with an optional server-only static-code QA challenge for fake/unsupported E.164 numbers. | Local code and tests are in repo; deploy after Twilio secrets are set. |
+| `verify-phone-otp` | Checks Twilio Verify OTP and marks the server-side phone challenge approved; when `PHONE_VERIFICATION_TEST_CODE` is set, that fixed code is also accepted for QA. | Local code and tests are in repo; deploy after Twilio secrets are set. |
 
 Useful commands:
 
@@ -162,6 +165,7 @@ deno test supabase/functions/send-phone-otp/handler.test.ts
 deno test supabase/functions/verify-phone-otp/handler.test.ts
 supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... PUBLIC_SITE_URL=https://uinvite.me
 supabase secrets set TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_VERIFY_SERVICE_SID=... TWILIO_MESSAGING_SERVICE_SID=...
+supabase secrets set PHONE_VERIFICATION_TEST_CODE=...
 supabase db push
 supabase functions deploy telegram-webhook --no-verify-jwt
 supabase functions deploy create-telegram-link

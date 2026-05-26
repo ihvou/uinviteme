@@ -119,6 +119,47 @@ Deno.test("sendPhoneOtp rejects unsupported countries before provider call", asy
   throw new Error("expected unsupported country error");
 });
 
+Deno.test("sendPhoneOtp creates static-code challenge for any E.164 test number", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+
+  const result = await sendPhoneOtp(
+    {
+      phone: "+1 555 123 4567",
+      purpose: "web_invite",
+    },
+    { ...env, phoneVerificationTestCode: "424242" },
+    createMockFetcher(calls) as typeof fetch,
+  );
+
+  if (result.deliveryMode !== "test_static_code") {
+    throw new Error(`unexpected delivery mode: ${result.deliveryMode}`);
+  }
+
+  if (calls.some((call) => call.url.includes("/Services/VA123"))) {
+    throw new Error("static-code challenge should not call Twilio");
+  }
+
+  const insert = calls.find((call) =>
+    call.url.endsWith("/rest/v1/phone_verifications") &&
+    call.init?.method === "POST"
+  );
+  if (!insert?.init?.body) {
+    throw new Error("phone verification row was not inserted");
+  }
+
+  const row = JSON.parse(insert.init.body.toString());
+  if (
+    row.phone_e164 !== "+15551234567" ||
+    row.country_code !== "TEST" ||
+    row.provider !== "test_static_code" ||
+    row.metadata.test_code_enabled !== true
+  ) {
+    throw new Error(
+      `unexpected static-code row: ${JSON.stringify(row)}`,
+    );
+  }
+});
+
 function createMockFetcher(calls: Array<{ url: string; init?: RequestInit }>) {
   return async (url: string | URL | Request, init?: RequestInit) => {
     const normalizedUrl = typeof url === "string"
