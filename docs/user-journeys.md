@@ -54,39 +54,39 @@ Current caveat: submission is server-side now, but public launch still needs CAP
 
 ## Scenario 3: Host Reviews And Accepts An Invite
 
-Status: Implemented, with idempotency hardening still planned.
+Status: Implemented, with notification/idempotency hardening still planned.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
 | 1 | Host | Opens `/invites`. | App loads pending invites owned by the host schedule. |
 | 2 | Host | Reviews visitor identity, contact, slot, and note. | Host decides whether to accept or decline. |
-| 3 | Host | Clicks Accept. | `accept-invite` marks invite accepted, creates or finds the date, and notifies linked visitor in Telegram. |
+| 3 | Host | Clicks Accept. | `accept-invite` marks invite accepted, creates or finds the date, creates a Safety Pack draft, and notifies linked visitor in Telegram. |
 | 4 | System | Removes invite from pending queue. | Date appears under `/dates`. |
 | 5 | Host | Opens date detail. | Date detail shows invitee contact, screening responses, slot info, and editable date fields. |
 
 Success condition: exactly one accepted invite creates exactly one date.
 
-Current caveat: acceptance is now server-side through `accept-invite`, but stronger idempotency still needs a transactional RPC or database uniqueness for dates by invite.
+Current caveat: acceptance is server-side and protected by a unique date-per-invite index, but stronger notification idempotency still needs a transactional RPC or outbox.
 
 ## Scenario 4: Host Activates Safety Pack
 
-Status: Partially implemented as UI/database state; real check-ins and Twilio SMS escalation are to be implemented.
+Status: Partially implemented as backend MVP; scheduling and real-world SMS verification still need operational setup.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
 | 1 | Host | Opens `/dates/:dateId/safety`. | App loads or creates a Safety Pack draft. |
 | 2 | Host | Reviews trusted-contact share text and check-in timing. | System shows check-in and escalation time. |
-| 3 | Host | Activates Safety Pack. | Safety Pack status becomes active. |
-| 4 | Host | Uses preview actions. | UI shows All good, Call me, and Emergency actions. |
-| 5 | Trusted contact | Future: receives emergency or missed-check-in alert. | Future backend sends Twilio SMS only when escalation is needed. |
+| 3 | Host | Activates Safety Pack. | `activate-safety-pack` marks it active with server-generated action tokens and sends Telegram activation copy when the host is linked. |
+| 4 | Host | Uses Telegram check-in actions. | Bot supports All good, Call me, and Emergency callbacks. |
+| 5 | Trusted contact | Receives emergency or missed-check-in alert. | `safety-alert` sends Twilio SMS only when escalation is needed and logs delivery attempts. |
 
 Success condition: Safety Pack is active and visible to the host.
 
-Current caveat: activation is UI/database state only. Real SMS/Telegram reminders and escalation require Edge Functions plus provider integration.
+Current caveat: backend functions exist, but production still needs scheduled invocation for `safety-checkin-reminder`, trusted-contact phone management, and staging verification with real Twilio SMS.
 
 ## Scenario 5: Telegram Bot Extension
 
-Status: Partially implemented: host invite administration is implemented; Safety Pack bot actions are future work.
+Status: Partially implemented: host invite/date administration is implemented; Safety Pack bot actions have an MVP backend.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
@@ -94,7 +94,7 @@ Status: Partially implemented: host invite administration is implemented; Safety
 | 2 | System | New invite arrives. | `submit-invite` sends Telegram notification with summary. |
 | 3 | Host | Taps Accept or Decline inline button. | Bot webhook calls trusted accept/decline logic. |
 | 4 | System | Date is created or invite declined. | Bot confirms action and app state updates. |
-| 5 | Host | Activates Safety Pack or taps check-in action. | Bot can act as notification channel for safety workflow. |
+| 5 | Host | Opens My dates or taps Safety Pack check-in action. | Bot lists upcoming dates natively and handles All good, Call me, and Emergency callbacks for active packs. |
 
 Success condition: Telegram becomes an additional host control surface without bypassing backend validation.
 
@@ -147,7 +147,7 @@ Status: Implemented as Telegram admin MVP.
 | 2 | System | New invite arrives. | Host gets Telegram message with invite summary and inline Accept/Decline buttons. |
 | 3 | Host | Taps Accept or Decline. | Bot callback reuses trusted `accept-invite` backend logic for both decisions. |
 | 4 | System | Updates invite lifecycle. | Pending invite is removed; accepted invite becomes a date; opted-in visitor is notified. |
-| 5 | Host | Uses `/start`, `/settings`, `/admin`, or the persistent host keyboard to open profile controls, view accepted-invite links, or browse nearby profiles. | Bot keeps host shortcuts available after linking and invite decisions; profile controls include public profile link plus web Settings/Dates links. |
+| 5 | Host | Uses `/start`, `/settings`, `/admin`, or the persistent host keyboard to open profile controls, list pending invites, list upcoming dates, or browse nearby profiles. | Bot keeps host shortcuts available after linking and invite decisions; upcoming date cards show Safety Pack state and actions when active. |
 | 6 | Host | Toggles Telegram delivery after linking. | `set-telegram-host-notifications` pauses or resumes Telegram invite notifications while keeping the account linked. |
 | 7 | Host | Toggles availability from profile controls. | Bot updates `public_profile_enabled` and `discovery_enabled`; the web Settings page reflects the same state. |
 
@@ -169,7 +169,7 @@ Current caveat: Telegram contact sharing requires the host to link Telegram firs
 
 ### Scenario 10: Safety Pack Telegram Check-In And SMS Emergency Alert
 
-Status: To be implemented with Telegram check-ins and Twilio SMS alerts.
+Status: Implemented as backend MVP; production scheduling and real SMS verification remain.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|

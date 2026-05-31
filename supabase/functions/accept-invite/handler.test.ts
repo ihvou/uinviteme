@@ -38,6 +38,12 @@ Deno.test("acceptInvite accepts invite, creates date, and notifies linked visito
   );
   if (!dateInsert) throw new Error("date was not inserted");
 
+  const safetyPackInsert = calls.find((call) =>
+    call.url.endsWith("/rest/v1/date_safety_packs") &&
+    call.init?.method === "POST"
+  );
+  if (!safetyPackInsert) throw new Error("Safety Pack draft was not inserted");
+
   const telegramCall = calls.find((call) => call.url.includes("/sendMessage"));
   if (!telegramCall?.init?.body) throw new Error("Telegram was not notified");
 
@@ -132,6 +138,8 @@ function createMockFetcher(
     hostTelegramUsername?: string;
   },
 ) {
+  const safetyPacks: Array<Record<string, unknown>> = [];
+
   return async (url: string | URL | Request, init?: RequestInit) => {
     const normalizedUrl = typeof url === "string"
       ? url
@@ -206,6 +214,19 @@ function createMockFetcher(
 
     if (normalizedUrl.endsWith("/rest/v1/dates")) {
       return json({});
+    }
+
+    if (normalizedUrl.includes("/rest/v1/date_safety_packs")) {
+      if (init?.method === "POST") {
+        const body = JSON.parse(init.body?.toString() || "{}");
+        safetyPacks.push({
+          id: "safety-pack-id",
+          ...body,
+        });
+        return json({});
+      }
+
+      return json(safetyPacks);
     }
 
     if (normalizedUrl.includes("/rest/v1/telegram_connections")) {

@@ -31,7 +31,7 @@ flowchart LR
 | Supabase Auth | Host signup/signin and browser session persistence | Host auth supports email/password and Google Identity Services ID-token sign-in. Visitors remain accountless. |
 | Supabase Postgres | Profiles, schedules, slots, screening config, invitees, invites, dates, safety packs, catalogs | RLS is the primary security boundary. |
 | Supabase Storage | Profile avatar uploads | Uses the `avatars` bucket from the browser. |
-| Supabase Edge Functions | `telegram-webhook`, `create-telegram-link`, `submit-invite`, and `accept-invite` are committed for trusted backend workflows | Recommended for trusted server-side workflows. |
+| Supabase Edge Functions | `telegram-webhook`, `create-telegram-link`, `submit-invite`, `accept-invite`, and Safety Pack functions are committed for trusted backend workflows | Recommended for trusted server-side workflows. |
 | Telegram Bot | Visitor invite-update linking, discovery browsing, accepted-invite notifications, and host invite admin are implemented; safety menus are pending | Uses Telegram webhook secret validation and Supabase Function Secrets. |
 
 ## Current Data Flow
@@ -170,7 +170,7 @@ Implemented:
 Next bot features:
 
 - Send date reminders.
-- Safety Pack check-in buttons.
+- Safety Pack check-in buttons are implemented for active packs.
 - Richer discovery ranking and trusted Telegram-origin invite creation.
 
 The bot is not required for the first web invite submission. Visitor Telegram linking happens after invite submission or when the visitor chooses to browse nearby profiles.
@@ -227,15 +227,17 @@ Planned backend surface:
 
 | Function | Purpose |
 |---|---|
-| `telegram-webhook` | Receive Telegram updates, link accounts, process callback buttons, drive visitor discovery and host admin menus. |
+| `telegram-webhook` | Receive Telegram updates, link accounts, process callback buttons, drive visitor discovery, host invite/date admin menus, and Safety Pack check-in callbacks. |
 | `create-telegram-link` | Authenticated host endpoint that creates a short-lived Telegram `/start host_<token>` payload for account linking. Implemented. |
 | `set-telegram-host-notifications` | Authenticated host endpoint that enables or pauses invite notifications for an already linked Telegram host chat. Implemented. |
 | `send-phone-otp` | Send SMS OTP to visitor phone numbers through Twilio Verify. Implemented. |
 | `verify-phone-otp` | Verify Twilio OTP and issue a short-lived phone verification reference. Implemented. |
 | `submit-invite` | Validate public invite payload, phone verification, duplicate rule, and create invite server-side. Implemented; CAPTCHA, stronger date validation, one-time link consumption, and screening/moderation enforcement remain planned hardening. |
-| `accept-invite` | Transactionally accept invite, create date and Safety Pack draft, enqueue notifications. |
+| `accept-invite` | Accept invite, create/find date, create Safety Pack draft, and notify linked visitors. A stronger transactional RPC/outbox is still planned. |
 | `decline-invite` | Transactionally decline invite and notify visitor when applicable. |
 | Host profile visibility | Implemented inside `telegram-webhook` host admin callbacks and web Settings; a separate function is not currently required. |
+| `activate-safety-pack` | Authenticated host endpoint that activates a Safety Pack, creates server-side action tokens, and sends Telegram activation copy. |
+| `ack-safety-pack` | Public token endpoint for All good, Call me, and Emergency Safety Pack actions. |
 | `safety-checkin-reminder` | Scheduled reminder and missed-check-in processor. |
 | `safety-alert` | Send trusted-contact SMS for emergency or missed check-in through Twilio Messaging. |
 

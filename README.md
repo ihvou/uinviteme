@@ -147,13 +147,17 @@ Committed functions:
 
 | Function | Purpose | Status |
 |---|---|---|
-| `telegram-webhook` | Receives Telegram bot updates, verifies Telegram's webhook secret header, links `/start invite_updates_<invite>` chats to invitees, runs visitor discovery from `/start discover_<handle>` with Twilio-backed phone verification before invite links, and lets linked hosts accept/decline invites plus toggle public/discovery availability. | Local code and tests are in repo; deployed manually from CLI. |
+| `telegram-webhook` | Receives Telegram bot updates, verifies Telegram's webhook secret header, links `/start invite_updates_<invite>` chats to invitees, runs visitor discovery from `/start discover_<handle>` with Twilio-backed phone verification before invite links, and lets linked hosts accept/decline invites, list dates, use Safety Pack actions, and toggle public/discovery availability. | Local code and tests are in repo; deployed manually from CLI with `--no-verify-jwt`. |
 | `create-telegram-link` | Authenticated host endpoint that creates a short-lived Telegram host-link payload for Settings. | Local code and tests are in repo; deploy with default JWT verification. |
 | `set-telegram-host-notifications` | Authenticated host endpoint that enables or pauses invite notifications for an already linked Telegram host chat. | Local code and tests are in repo; deploy with default JWT verification. |
-| `accept-invite` | Authenticated host endpoint that accepts/declines invites, creates the date on accept, and notifies a Telegram-linked visitor. | Local code and tests are in repo; deployed manually from CLI with default JWT verification. |
+| `accept-invite` | Authenticated host endpoint that accepts/declines invites, creates/finds the date on accept, creates a Safety Pack draft, and notifies a Telegram-linked visitor. | Local code and tests are in repo; deployed manually from CLI with default JWT verification. |
 | `submit-invite` | Public invite submission endpoint that validates schedule/slot/link, server-checks mock or Twilio phone verification, blocks duplicate pending invites, and creates invitee + invite records with the service role key. | Local code and tests are in repo; deploy before applying the direct-browser-write RLS cleanup migration. |
 | `send-phone-otp` | Starts Twilio Verify SMS OTP for supported visitor phone numbers, with an optional server-only static-code QA challenge for fake/unsupported E.164 numbers. | Local code and tests are in repo; deploy after Twilio secrets are set. |
 | `verify-phone-otp` | Checks Twilio Verify OTP and marks the server-side phone challenge approved; when `PHONE_VERIFICATION_TEST_CODE` is set, that fixed code is also accepted for QA. | Local code and tests are in repo; deploy after Twilio secrets are set. |
+| `activate-safety-pack` | Authenticated host endpoint that activates a Safety Pack with server-generated tokens and Telegram activation copy. | Local code is in repo; deploy with default JWT verification. |
+| `ack-safety-pack` | Public token endpoint for Safety Pack All good, Call me, and Emergency actions. | Local code is in repo; deploy with `--no-verify-jwt`. |
+| `safety-alert` | Authenticated endpoint that sends trusted-contact Twilio SMS for emergency or missed check-in. | Local code is in repo; deploy after Twilio Messaging secrets are set. |
+| `safety-checkin-reminder` | Scheduled processor for Telegram check-in reminders and missed-check-in escalation. | Local code is in repo; deploy with `--no-verify-jwt` and protect with `SAFETY_CRON_SECRET` when configured. |
 
 Useful commands:
 
@@ -165,6 +169,7 @@ deno test supabase/functions/accept-invite/handler.test.ts
 deno test supabase/functions/submit-invite/handler.test.ts
 deno test supabase/functions/send-phone-otp/handler.test.ts
 deno test supabase/functions/verify-phone-otp/handler.test.ts
+deno check supabase/functions/activate-safety-pack/handler.ts supabase/functions/ack-safety-pack/handler.ts supabase/functions/safety-alert/handler.ts supabase/functions/safety-checkin-reminder/handler.ts
 supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... PUBLIC_SITE_URL=https://uinvite.me
 supabase secrets set TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_VERIFY_SERVICE_SID=... TWILIO_MESSAGING_SERVICE_SID=...
 supabase secrets set PHONE_VERIFICATION_TEST_CODE=...
@@ -176,6 +181,10 @@ supabase functions deploy accept-invite
 supabase functions deploy submit-invite --no-verify-jwt
 supabase functions deploy send-phone-otp
 supabase functions deploy verify-phone-otp
+supabase functions deploy activate-safety-pack
+supabase functions deploy ack-safety-pack --no-verify-jwt
+supabase functions deploy safety-alert
+supabase functions deploy safety-checkin-reminder --no-verify-jwt
 ```
 
 After deploy, configure BotFather/Telegram `setWebhook` to point at:

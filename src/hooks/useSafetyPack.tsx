@@ -5,10 +5,6 @@ import { useAuth } from './useAuth';
 
 export type SafetyPack = Tables<'date_safety_packs'>;
 
-function generateToken(): string {
-  return crypto.randomUUID().replace(/-/g, '').slice(0, 16);
-}
-
 export function useSafetyPack(dateId: string | undefined) {
   const { user } = useAuth();
   const [safetyPack, setSafetyPack] = useState<SafetyPack | null>(null);
@@ -51,9 +47,6 @@ export function useSafetyPack(dateId: string | undefined) {
           date_id: dateId,
           status: 'draft',
           grace_minutes: 30,
-          ok_token: generateToken(),
-          call_token: generateToken(),
-          emergency_token: generateToken(),
         })
         .select()
         .single();
@@ -69,26 +62,29 @@ export function useSafetyPack(dateId: string | undefined) {
     fetchOrCreatePack();
   }, [user, dateId]);
 
-  const activate = useCallback(async () => {
-    if (!safetyPack) return { error: 'No safety pack' };
+  const activate = useCallback(async (checkinAt?: Date, graceMinutes?: number, shareMessage?: string) => {
+    if (!dateId) return { error: 'No date' };
 
-    const { data, error: updateError } = await supabase
-      .from('date_safety_packs')
-      .update({
-        status: 'active',
-        activated_at: new Date().toISOString(),
-      })
-      .eq('id', safetyPack.id)
-      .select()
-      .single();
+    const defaultCheckinAt = checkinAt?.toISOString() ||
+      safetyPack?.default_checkin_at ||
+      new Date().toISOString();
 
-    if (updateError) {
-      return { error: updateError.message };
+    const { data, error: invokeError } = await supabase.functions.invoke('activate-safety-pack', {
+      body: {
+        dateId,
+        checkinAt: defaultCheckinAt,
+        graceMinutes: graceMinutes ?? safetyPack?.grace_minutes ?? 30,
+        shareMessage: shareMessage ?? safetyPack?.share_message ?? null,
+      },
+    });
+
+    if (invokeError) {
+      return { error: invokeError.message };
     }
 
-    setSafetyPack(data);
+    setSafetyPack(data.pack);
     return { error: null };
-  }, [safetyPack]);
+  }, [dateId, safetyPack]);
 
   const pause = useCallback(async () => {
     if (!safetyPack) return { error: 'No safety pack' };

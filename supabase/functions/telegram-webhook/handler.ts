@@ -5,6 +5,12 @@ import {
   VerifyPhoneOtpEnv,
 } from "../verify-phone-otp/handler.ts";
 import { hashTelegramLinkToken } from "../_shared/telegramLinkToken.ts";
+import {
+  handleSafetyAction,
+  safetyActionKeyboard,
+  SafetyAction,
+  SafetyPackRecord,
+} from "../_shared/safety.ts";
 
 const TELEGRAM_SECRET_HEADER = "x-telegram-bot-api-secret-token";
 const UUID_REGEX =
@@ -27,6 +33,9 @@ const SLOT_CALLBACK_PREFIX = "slot:";
 const HOST_ACCEPT_CALLBACK_PREFIX = "host_accept:";
 const HOST_DECLINE_CALLBACK_PREFIX = "host_decline:";
 const HOST_VISIBILITY_CALLBACK_PREFIX = "host_visibility:";
+const SAFETY_OK_CALLBACK_PREFIX = "safety_ok:";
+const SAFETY_CALL_CALLBACK_PREFIX = "safety_call:";
+const SAFETY_EMERGENCY_CALLBACK_PREFIX = "safety_emergency:";
 
 type Fetcher = typeof fetch;
 type TelegramParseMode = "HTML" | "MarkdownV2";
@@ -39,6 +48,8 @@ export interface TelegramWebhookEnv
   telegramWebhookSecret: string;
   telegramApiBaseUrl: string;
   publicSiteUrl: string;
+  twilioMessagingServiceSid?: string;
+  twilioApiBaseUrl?: string;
 }
 
 interface TelegramUpdate {
@@ -106,6 +117,19 @@ interface HostPendingInviteRecord {
     pay_pref: string | null;
     notes: string | null;
   } | null;
+}
+
+interface HostDateRecord {
+  id: string;
+  user_id: string;
+  invitee_snapshot: Record<string, unknown>;
+  date: string;
+  time_bucket: string;
+  time_start: string | null;
+  time_end: string | null;
+  area_label: string;
+  venue_text: string | null;
+  status: "upcoming" | "completed" | "cancelled";
 }
 
 interface InviteeRecord {
@@ -550,6 +574,28 @@ async function handleTelegramCallback(
     return result;
   }
 
+  const safetyAction = parseSafetyCallback(data);
+  if (safetyAction) {
+    const result = await handleTelegramSafetyAction(
+      env,
+      fetcher,
+      chatId,
+      safetyAction.packId,
+      safetyAction.action,
+    );
+    await answerCallbackQuery(
+      env,
+      fetcher,
+      callback.id,
+      safetyAction.action === "ok"
+        ? "Checked in"
+        : safetyAction.action === "call"
+        ? "Call request saved"
+        : "Emergency alert sent",
+    );
+    return result;
+  }
+
   await answerCallbackQuery(env, fetcher, callback.id);
   return { ok: true, action: "unknown_callback" };
 }
@@ -848,20 +894,42 @@ async function sendHostDatesLinkForChat(
     return { ok: true, action: "host_not_linked" };
   }
 
-  const base = env.publicSiteUrl.replace(/\/+$/, "");
+  const dates = await getHostUpcomingDates(env, fetcher, connection.user_id);
+
+  if (dates.length === 0) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "No upcoming dates yet.",
+      hostMainKeyboard(),
+    );
+    return { ok: true, action: "host_dates_empty" };
+  }
+
   await sendTelegramMessage(
     env,
     fetcher,
     chatId,
-    [
-      "Your dates are in your web dashboard.",
-      "",
-      `My dates: ${base}/dates`,
-    ].join("\n"),
+    dates.length === 1
+      ? "You have 1 upcoming date."
+      : `You have ${dates.length} upcoming dates. Showing the latest ${dates.length}.`,
     hostMainKeyboard(),
   );
 
-  return { ok: true, action: "host_dates_link" };
+  for (const [index, date] of dates.entries()) {
+    const pack = await getSafetyPackForDate(env, fetcher, date.id);
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      formatHostDate(date, pack, index + 1),
+      hostDateKeyboard(env, date, pack),
+      "HTML",
+    );
+  }
+
+  return { ok: true, action: "host_dates_list", count: dates.length };
 }
 
 async function handleBackMessage(
@@ -905,6 +973,65 @@ async function handleBackMessage(
     browseProfilesKeyboard(),
   );
   return { ok: true, action: "back_to_browse_menu" };
+}
+
+async function handleTelegramSafetyAction(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  chatId: string,
+  packId: string,
+  action: SafetyAction,
+) {
+  const connection = await getHostTelegramConnectionByChat(
+    env,
+    fetcher,
+    chatId,
+  );
+
+  if (!connection?.user_id) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      "Link your host account from Settings before using Safety Pack actions here.",
+      removeKeyboard(),
+    );
+    return { ok: true, action: "host_not_linked" };
+  }
+
+  try {
+    const result = await handleSafetyAction(env, fetcher, {
+      packId,
+      action,
+      userId: connection.user_id,
+    });
+
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      action === "ok"
+        ? "Checked in. Safety Pack completed."
+        : action === "call"
+        ? "Call request saved. No trusted-contact SMS was sent."
+        : "Emergency alert sent to trusted contacts.",
+      hostMainKeyboard(),
+    );
+
+    return result;
+  } catch (error) {
+    await sendTelegramMessage(
+      env,
+      fetcher,
+      chatId,
+      error instanceof Error && error.message === "Forbidden"
+        ? "That Safety Pack belongs to another host account."
+        : "I couldn't update this Safety Pack. Please try again from the web app.",
+      hostMainKeyboard(),
+    );
+
+    return { ok: true, action: "safety_action_failed", packId };
+  }
 }
 
 async function handleHostVisibilityCallback(
@@ -1672,6 +1799,10 @@ function readEnv(): TelegramWebhookEnv {
   const twilioVerifyServiceSid = requiredEnv("TWILIO_VERIFY_SERVICE_SID");
   const twilioVerifyApiBaseUrl = Deno.env.get("TWILIO_VERIFY_API_BASE_URL") ||
     "https://verify.twilio.com/v2";
+  const twilioMessagingServiceSid = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID")
+    ?.trim();
+  const twilioApiBaseUrl = Deno.env.get("TWILIO_API_BASE_URL") ||
+    "https://api.twilio.com/2010-04-01";
   const phoneVerificationTestCode = Deno.env.get("PHONE_VERIFICATION_TEST_CODE")
     ?.trim() || null;
 
@@ -1686,6 +1817,8 @@ function readEnv(): TelegramWebhookEnv {
     twilioAuthToken,
     twilioVerifyServiceSid,
     twilioVerifyApiBaseUrl,
+    twilioMessagingServiceSid,
+    twilioApiBaseUrl,
     phoneVerificationTestCode,
   };
 }
@@ -1771,6 +1904,36 @@ async function getPendingInvitesForSchedules(
     fetcher,
     `/rest/v1/invites?${scheduleFilter}&status=eq.pending&select=id,target_date,created_at,invitee_note,invitee:invitees(id,name,phone_e164,phone_verified,instagram_handle,telegram_username,occupation),slot:slots(id,weekday,time_bucket,time_start,time_end,area_label,pay_pref,notes)&order=created_at.desc&limit=10`,
   );
+}
+
+async function getHostUpcomingDates(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  userId: string,
+) {
+  return await supabaseRest<HostDateRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/dates?user_id=eq.${
+      encodeURIComponent(userId)
+    }&status=eq.upcoming&select=id,user_id,invitee_snapshot,date,time_bucket,time_start,time_end,area_label,venue_text,status&order=date.asc&limit=10`,
+  );
+}
+
+async function getSafetyPackForDate(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  dateId: string,
+) {
+  const rows = await supabaseRest<SafetyPackRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/date_safety_packs?date_id=eq.${
+      encodeURIComponent(dateId)
+    }&select=*&limit=1`,
+  );
+
+  return rows[0] ?? null;
 }
 
 async function getLatestBrowseHandleForChat(
@@ -2527,6 +2690,26 @@ function hostInviteDecisionKeyboard(inviteId: string) {
   };
 }
 
+function hostDateKeyboard(
+  env: TelegramWebhookEnv,
+  date: HostDateRecord,
+  pack: SafetyPackRecord | null,
+) {
+  const base = env.publicSiteUrl.replace(/\/+$/, "");
+  const rows: Array<Array<Record<string, string>>> = [
+    [
+      { text: "Open details", url: `${base}/dates/${encodeURIComponent(date.id)}` },
+      { text: "Safety Pack", url: `${base}/dates/${encodeURIComponent(date.id)}/safety` },
+    ],
+  ];
+
+  if (pack?.status === "active") {
+    rows.push(...safetyActionKeyboard(pack.id).inline_keyboard);
+  }
+
+  return { inline_keyboard: rows };
+}
+
 function hostVisibilityKeyboard(profile: HostVisibilityProfileRecord) {
   return {
     inline_keyboard: [
@@ -2552,6 +2735,31 @@ function hostVisibilityKeyboard(profile: HostVisibilityProfileRecord) {
       ],
     ],
   };
+}
+
+function parseSafetyCallback(data?: string) {
+  if (data?.startsWith(SAFETY_OK_CALLBACK_PREFIX)) {
+    return {
+      action: "ok" as const,
+      packId: data.slice(SAFETY_OK_CALLBACK_PREFIX.length),
+    };
+  }
+
+  if (data?.startsWith(SAFETY_CALL_CALLBACK_PREFIX)) {
+    return {
+      action: "call" as const,
+      packId: data.slice(SAFETY_CALL_CALLBACK_PREFIX.length),
+    };
+  }
+
+  if (data?.startsWith(SAFETY_EMERGENCY_CALLBACK_PREFIX)) {
+    return {
+      action: "emergency" as const,
+      packId: data.slice(SAFETY_EMERGENCY_CALLBACK_PREFIX.length),
+    };
+  }
+
+  return null;
 }
 
 function formatHostSettingsText(
@@ -2621,6 +2829,58 @@ function formatHostPendingSlotTime(
     return `${slot.time_start} - ${slot.time_end}`;
   }
   return timeBucketLabel(slot.time_bucket);
+}
+
+function formatHostDate(
+  date: HostDateRecord,
+  pack: SafetyPackRecord | null,
+  index: number,
+) {
+  const invitee = getInviteeSnapshot(date);
+  const packStatus = pack?.status || "not started";
+  const lines = [
+    `<b>${index}. ${escapeHtml(invitee.name || "Upcoming date")}</b>`,
+    `When: ${escapeHtml(formatTargetDate(date.date))}, ${
+      escapeHtml(formatHostDateTime(date))
+    }`,
+    `Where: ${escapeHtml(date.venue_text || date.area_label)}`,
+    invitee.phone_e164 ? `Phone: ${escapeHtml(invitee.phone_e164)}` : null,
+    invitee.instagram_handle
+      ? `Instagram: ${instagramHtmlLink(invitee.instagram_handle)}`
+      : null,
+    invitee.telegram_username
+      ? `Telegram: @${escapeHtml(normalizeSocialHandle(invitee.telegram_username))}`
+      : null,
+    `Safety Pack: ${escapeHtml(packStatus)}`,
+    pack?.default_checkin_at
+      ? `Check-in: ${escapeHtml(formatShortDateTime(pack.default_checkin_at))}`
+      : null,
+  ].filter(Boolean);
+
+  return lines.join("\n");
+}
+
+function getInviteeSnapshot(date: HostDateRecord) {
+  const snapshot = date.invitee_snapshot || {};
+  return {
+    name: typeof snapshot.name === "string" ? snapshot.name : null,
+    phone_e164: typeof snapshot.phone_e164 === "string"
+      ? snapshot.phone_e164
+      : null,
+    instagram_handle: typeof snapshot.instagram_handle === "string"
+      ? snapshot.instagram_handle
+      : null,
+    telegram_username: typeof snapshot.telegram_username === "string"
+      ? snapshot.telegram_username
+      : null,
+  };
+}
+
+function formatHostDateTime(date: HostDateRecord) {
+  if (date.time_start && date.time_end) {
+    return `${date.time_start} - ${date.time_end}`;
+  }
+  return timeBucketLabel(date.time_bucket);
 }
 
 function formatTargetDate(value: string) {

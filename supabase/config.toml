@@ -2,3 +2,9 @@ project_id = "vvjgrvltnnqoiijoufry"
 
 [functions.telegram-webhook]
 verify_jwt = false
+
+[functions.ack-safety-pack]
+verify_jwt = false
+
+[functions.safety-checkin-reminder]
+verify_jwt = false

@@ -51,18 +51,15 @@ export default function DateSafetyPack() {
   }, [safetyPack]);
 
   const handleActivate = async () => {
-    // Save check-in time first
     const dateOfDate = dateRecord?.date ? new Date(dateRecord.date) : new Date();
     const [hours, mins] = checkinTime.split(':').map(Number);
     const checkinAt = setMinutes(setHours(dateOfDate, hours), mins);
     
-    await updateCheckinTime(checkinAt, graceMinutes);
-    
-    const { error: activateError } = await activate();
+    const { error: activateError } = await activate(checkinAt, graceMinutes, generateShareMessage());
     if (activateError) {
       toast.error('Failed to activate Safety Pack');
     } else {
-      toast.success('Safety Pack activated!');
+      toast.success('Safety Pack activated. Telegram check-in will be sent when it is time.');
     }
   };
 
@@ -333,7 +330,7 @@ I'll check in by ${checkinTime ? format(parse(checkinTime, 'HH:mm', new Date()),
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                Check-in arrives via SMS with small links. If you don't check in by the escalation time, we'll notify your trusted contacts.
+                Check-in arrives in Telegram. If you tap Emergency or miss the check-in, we'll notify your trusted contacts by SMS.
               </p>
             </CardContent>
           </Card>
@@ -348,7 +345,7 @@ I'll check in by ${checkinTime ? format(parse(checkinTime, 'HH:mm', new Date()),
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                You'll receive quiet SMS links you can tap during your date—no visible buttons needed.
+                You'll receive quiet Telegram check-in buttons during your date. Trusted contacts only receive SMS for emergency or missed check-in alerts.
               </p>
               
               <Collapsible open={showActions} onOpenChange={setShowActions}>

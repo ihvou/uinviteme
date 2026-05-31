@@ -329,13 +329,19 @@ Deno.test("handleTelegramUpdate lists pending invites natively for linked hosts"
     mock.fetcher as typeof fetch,
   );
 
-  if (datesResult.action !== "host_dates_link") {
+  if (datesResult.action !== "host_dates_list") {
     throw new Error(`unexpected action: ${JSON.stringify(datesResult)}`);
   }
 
   const datesBody = mock.lastTelegramBody();
-  if (!datesBody.text.includes("https://uinvite.me/dates")) {
-    throw new Error("dates link was not sent");
+  if (
+    !datesBody.text.includes("E2E Visitor") ||
+    datesBody.reply_markup?.inline_keyboard?.[0]?.[0]?.text !==
+      "Open details" ||
+    datesBody.reply_markup?.inline_keyboard?.[1]?.[0]?.callback_data !==
+      "safety_ok:safety-pack-id"
+  ) {
+    throw new Error("date was not rendered natively");
   }
 });
 
@@ -391,6 +397,44 @@ Deno.test("handleTelegramUpdate returns linked hosts from discovery to main menu
     telegramBody.reply_markup?.keyboard?.[1]?.[0]?.text !== "My dates"
   ) {
     throw new Error("Back did not restore host main keyboard");
+  }
+});
+
+Deno.test("handleTelegramUpdate handles Safety Pack check-in callbacks", async () => {
+  const mock = createMockFetcher();
+  mock.telegramConnections.push({
+    user_id: ORIGIN_ID,
+    telegram_chat_id: CHAT_ID,
+    telegram_username: "HostUser",
+    is_active: true,
+  });
+
+  const result = await handleTelegramUpdate(
+    {
+      callback_query: {
+        id: "callback-safety-ok",
+        data: "safety_ok:safety-pack-id",
+        from: { username: "HostUser" },
+        message: { chat: { id: CHAT_ID } },
+      },
+    },
+    env(),
+    mock.fetcher as typeof fetch,
+  );
+
+  if (result.action !== "ok") {
+    throw new Error(`unexpected action: ${JSON.stringify(result)}`);
+  }
+
+  const checkinEvent = mock.calls.find((call) =>
+    call.url.endsWith("/rest/v1/checkin_events") &&
+    call.init?.method === "POST"
+  );
+  if (!checkinEvent) throw new Error("check-in event was not recorded");
+
+  const telegramBody = mock.lastTelegramBody();
+  if (!telegramBody.text.includes("Checked in")) {
+    throw new Error("Safety Pack check-in confirmation was not sent");
   }
 });
 
@@ -1045,10 +1089,97 @@ function createMockFetcher() {
     }
 
     if (normalizedUrl.includes("/rest/v1/dates?")) {
+      if (normalizedUrl.includes("user_id=eq.")) {
+        return json([{
+          id: "date-id-1",
+          user_id: ORIGIN_ID,
+          invitee_snapshot: {
+            name: "E2E Visitor",
+            phone_e164: "+6591234567",
+            instagram_handle: "e2evisitor",
+            telegram_username: "e2evisitor",
+          },
+          date: "2026-05-25",
+          time_bucket: "early_evening",
+          time_start: null,
+          time_end: null,
+          area_label: "Marina Bay",
+          venue_text: null,
+          status: "upcoming",
+        }]);
+      }
+
+      if (normalizedUrl.includes("id=eq.date-id-1")) {
+        return json([{
+          id: "date-id-1",
+          user_id: ORIGIN_ID,
+          invitee_snapshot: { name: "E2E Visitor" },
+          date: "2026-05-25",
+          time_bucket: "early_evening",
+          time_start: null,
+          time_end: null,
+          area_label: "Marina Bay",
+          venue_text: null,
+          status: "upcoming",
+        }]);
+      }
+
+      return json([]);
+    }
+
+    if (normalizedUrl.includes("/rest/v1/date_safety_packs")) {
+      if (init?.method === "POST") return json({});
+      if (init?.method === "PATCH") return json({});
+      if (normalizedUrl.includes("date_id=eq.")) {
+        return json([{
+          id: "safety-pack-id",
+          date_id: "date-id-1",
+          status: "active",
+          default_checkin_at: "2026-05-25T18:00:00Z",
+          grace_minutes: 30,
+          share_message: null,
+          ok_token: "ok-token",
+          call_token: "call-token",
+          emergency_token: "emergency-token",
+          activated_at: "2026-05-25T12:00:00Z",
+          completed_at: null,
+          reminder_sent_at: null,
+          last_checkin_at: null,
+          call_requested_at: null,
+          escalated_at: null,
+          escalation_reason: null,
+        }]);
+      }
+
+      if (normalizedUrl.includes("id=eq.safety-pack-id")) {
+        return json([{
+          id: "safety-pack-id",
+          date_id: "date-id-1",
+          status: "active",
+          default_checkin_at: "2026-05-25T18:00:00Z",
+          grace_minutes: 30,
+          share_message: null,
+          ok_token: "ok-token",
+          call_token: "call-token",
+          emergency_token: "emergency-token",
+          activated_at: "2026-05-25T12:00:00Z",
+          completed_at: null,
+          reminder_sent_at: null,
+          last_checkin_at: null,
+          call_requested_at: null,
+          escalated_at: null,
+          escalation_reason: null,
+        }]);
+      }
+
       return json([]);
     }
 
     if (normalizedUrl.endsWith("/rest/v1/dates")) {
+      return json({});
+    }
+
+    if (normalizedUrl.endsWith("/rest/v1/checkin_events")) {
       return json({});
     }
 

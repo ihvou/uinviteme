@@ -1,3 +1,5 @@
+import { ensureSafetyPackDraft } from "../_shared/safety.ts";
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -193,6 +195,7 @@ export async function acceptInvite(
     slot,
     userId,
   });
+  await ensureSafetyPackDraft(env, fetcher, dateId);
 
   const notification = await notifyVisitorIfLinked(env, fetcher, {
     invite,
@@ -285,33 +288,45 @@ async function getOrCreateDate(
   if (existing) return existing.id;
 
   const dateId = crypto.randomUUID();
-  await supabaseRest(env, fetcher, "/rest/v1/dates", {
-    method: "POST",
-    body: JSON.stringify({
-      id: dateId,
-      user_id: data.userId,
-      invite_id: data.invite.id,
-      date: data.invite.target_date,
-      time_bucket: data.slot.time_bucket,
-      time_start: data.slot.time_start,
-      time_end: data.slot.time_end,
-      area_label: data.slot.area_label,
-      area_place_id: data.slot.area_place_id,
-      format: data.slot.format,
-      intent_tag: data.slot.intent_tag,
-      vibe_tags: data.slot.vibe_tags,
-      boundary_tags: data.slot.boundary_tags,
-      pay_pref: data.slot.pay_pref,
-      invitee_snapshot: {
-        name: data.invitee.name,
-        phone_e164: data.invitee.phone_e164,
-        instagram_handle: data.invitee.instagram_handle,
-        telegram_username: data.invitee.telegram_username,
-        email: data.invitee.email,
-      },
-      status: "upcoming",
-    }),
-  });
+  try {
+    await supabaseRest(env, fetcher, "/rest/v1/dates", {
+      method: "POST",
+      body: JSON.stringify({
+        id: dateId,
+        user_id: data.userId,
+        invite_id: data.invite.id,
+        date: data.invite.target_date,
+        time_bucket: data.slot.time_bucket,
+        time_start: data.slot.time_start,
+        time_end: data.slot.time_end,
+        area_label: data.slot.area_label,
+        area_place_id: data.slot.area_place_id,
+        format: data.slot.format,
+        intent_tag: data.slot.intent_tag,
+        vibe_tags: data.slot.vibe_tags,
+        boundary_tags: data.slot.boundary_tags,
+        pay_pref: data.slot.pay_pref,
+        invitee_snapshot: {
+          name: data.invitee.name,
+          phone_e164: data.invitee.phone_e164,
+          instagram_handle: data.invitee.instagram_handle,
+          telegram_username: data.invitee.telegram_username,
+          email: data.invitee.email,
+        },
+        status: "upcoming",
+      }),
+    });
+  } catch (error) {
+    const racedExisting = await getOne<DateRecord>(
+      env,
+      fetcher,
+      `/rest/v1/dates?invite_id=eq.${
+        encodeURIComponent(data.invite.id)
+      }&select=id&limit=1`,
+    );
+    if (racedExisting) return racedExisting.id;
+    throw error;
+  }
 
   return dateId;
 }

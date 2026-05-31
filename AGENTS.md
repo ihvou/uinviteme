@@ -56,14 +56,15 @@ Do not re-add `bun.lockb` unless the project intentionally moves back to Bun. Do
 
 Supabase Edge Functions are now part of the repo for trusted backend slices:
 
-- `supabase/functions/telegram-webhook` handles visitor Telegram opt-in, discovery browsing, inline slot callbacks, host invite admin, host public/discovery visibility toggles, and Twilio-backed Telegram discovery phone verification.
+- `supabase/functions/telegram-webhook` handles visitor Telegram opt-in, discovery browsing, inline slot callbacks, host invite/date admin, host public/discovery visibility toggles, Twilio-backed Telegram discovery phone verification, and Safety Pack check-in callbacks.
 - `supabase/functions/create-telegram-link` creates short-lived host Telegram link tokens from authenticated Settings sessions.
 - `supabase/functions/set-telegram-host-notifications` lets a linked host pause or resume Telegram invite notifications from the web UI.
 - `supabase/functions/accept-invite` handles authenticated host accept/decline decisions and visitor Telegram notifications.
+- `supabase/functions/activate-safety-pack`, `ack-safety-pack`, `safety-alert`, and `safety-checkin-reminder` handle Safety Pack activation, check-in actions, emergency/missed-check-in SMS alerts, and scheduled reminder processing.
 - `supabase/functions/submit-invite` handles public invite submission, server-side mock/Twilio phone verification checks, duplicate pending invite prevention, and invite creation.
 - `supabase/functions/send-phone-otp` and `supabase/functions/verify-phone-otp` handle Twilio Verify OTP plus the optional server-only `PHONE_VERIFICATION_TEST_CODE` QA override.
 
-Real phone verification activation and Safety Pack escalation still need to move from browser/database state into trusted Edge Functions.
+Real phone verification and Safety Pack escalation now have trusted Edge Function paths. Remaining Safety Pack work is operational scheduling, trusted-contact phone management UX, and delivery-status callbacks.
 
 When adding trusted backend behavior:
 
@@ -105,8 +106,8 @@ Keep these files in sync when architecture or flows change:
 The highest priority gaps are tracked in [tasks.md](tasks.md). In short:
 
 - Move public submit and accept flows server-side.
-- Implement real Safety Pack notifications.
+- Configure and verify real Safety Pack notification scheduling.
 - Add CAPTCHA/rate limiting.
 - Clean env handling.
 - Continue moving trusted backend workflows into Supabase Edge Functions.
-- Continue Telegram work beyond the implemented visitor discovery and host administration MVPs: Safety Pack check-ins, trusted Telegram-origin invite creation, and trusted-contact escalation by SMS.
+- Continue Telegram work beyond the implemented visitor discovery, host administration, date list, and Safety Pack MVPs: trusted Telegram-origin invite creation and richer safety operations.
