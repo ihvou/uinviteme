@@ -32,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PhotoUpload } from "@/components/settings/PhotoUpload";
 import { HostTelegramConnectCard } from "@/components/settings/HostTelegramConnectCard";
+import { TrustedContactsCard } from "@/components/settings/TrustedContactsCard";
 import { BrandLogo } from "@/components/BrandLogo";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -334,6 +335,8 @@ export default function Settings() {
           </Card>
 
           {/* Screening config moved to Schedule page */}
+
+          <TrustedContactsCard />
 
           <HostTelegramConnectCard />
 

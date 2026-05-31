@@ -678,6 +678,9 @@ Deno.test("handleTelegramUpdate gates Telegram-origin invite with Twilio phone v
   if (!telegramBody.text.includes("https://uinvite.me/maya?slot=slot-maya-1")) {
     throw new Error("verified phone did not unlock invite link");
   }
+  if (!telegramBody.text.includes("Small tip")) {
+    throw new Error("first Telegram invite did not encourage adding photos");
+  }
 });
 
 Deno.test("handleTelegramUpdate uses manual city and Telegram location context", async () => {
@@ -1185,6 +1188,10 @@ function createMockFetcher() {
 
     if (normalizedUrl.endsWith("/rest/v1/notification_log")) {
       return json({});
+    }
+
+    if (normalizedUrl.includes("/rest/v1/trusted_contacts")) {
+      return json([{ phone_e164: "+6591234567", label: "Friend" }]);
     }
 
     if (

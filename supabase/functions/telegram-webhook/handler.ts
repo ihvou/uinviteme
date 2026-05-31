@@ -1423,15 +1423,15 @@ async function handleInviteSlotSelection(
     return { ok: true, action: "slot_not_found" };
   }
 
-  if (
-    session.phone_verified || await chatHasVerifiedInvitee(env, fetcher, chatId)
-  ) {
+  const hasVerifiedInvitee = await chatHasVerifiedInvitee(env, fetcher, chatId);
+  if (session.phone_verified || hasVerifiedInvitee) {
     await sendInviteLink(
       env,
       fetcher,
       chatId,
       session.current_profile_handle,
       selected.id,
+      { includePhotoTip: !hasVerifiedInvitee },
     );
     return {
       ok: true,
@@ -1621,7 +1621,9 @@ async function handlePhoneCodeMessage(
     const target = parsePendingInviteTarget(handle);
     resultHandle = target.handle;
     resultSlotId = target.slotId;
-    await sendInviteLink(env, fetcher, chatId, target.handle, target.slotId);
+    await sendInviteLink(env, fetcher, chatId, target.handle, target.slotId, {
+      includePhotoTip: true,
+    });
   } else {
     await sendTelegramMessage(
       env,
@@ -2541,8 +2543,16 @@ async function sendInviteLink(
   chatId: string,
   handle: string,
   slotId?: string | null,
+  options: { includePhotoTip?: boolean } = {},
 ) {
   const url = profileUrl(env, handle, slotId);
+  const photoTip = options.includePhotoTip
+    ? [
+      "",
+      "📸 *Small tip*",
+      "Hosts are more likely to accept requests when they can see clear recent photos\\. Add photos if the invite form asks, or include an Instagram with photos\\.",
+    ]
+    : [];
   await sendTelegramMessage(
     env,
     fetcher,
@@ -2553,6 +2563,7 @@ async function sendInviteLink(
       `Open the selected invite option here: [${escapeMarkdown(handle)}](${
         escapeMarkdownUrl(url)
       })`,
+      ...photoTip,
     ].join("\n"),
     discoveryKeyboard(),
     "MarkdownV2",

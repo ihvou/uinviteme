@@ -635,6 +635,39 @@ export type Database = {
         }
         Relationships: []
       }
+      trusted_contacts: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string | null
+          phone_e164: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          phone_e164: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          phone_e164?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       schedules: {
         Row: {
           created_at: string | null

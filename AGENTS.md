@@ -63,8 +63,9 @@ Supabase Edge Functions are now part of the repo for trusted backend slices:
 - `supabase/functions/activate-safety-pack`, `ack-safety-pack`, `safety-alert`, and `safety-checkin-reminder` handle Safety Pack activation, check-in actions, emergency/missed-check-in SMS alerts, and scheduled reminder processing.
 - `supabase/functions/submit-invite` handles public invite submission, server-side mock/Twilio phone verification checks, duplicate pending invite prevention, and invite creation.
 - `supabase/functions/send-phone-otp` and `supabase/functions/verify-phone-otp` handle Twilio Verify OTP plus the optional server-only `PHONE_VERIFICATION_TEST_CODE` QA override.
+- `.github/workflows/safety-checkin-reminder.yml` invokes `safety-checkin-reminder` every five minutes. It needs the GitHub `SAFETY_CRON_SECRET` repository secret to match the Supabase Function Secret.
 
-Real phone verification and Safety Pack escalation now have trusted Edge Function paths. Remaining Safety Pack work is operational scheduling, trusted-contact phone management UX, and delivery-status callbacks.
+Real phone verification and Safety Pack escalation now have trusted Edge Function paths. Trusted contacts live in the private `trusted_contacts` table, not as new writes to `profiles.trusted_contacts_phones`. Remaining Safety Pack work is staging SMS verification and delivery-status callbacks.
 
 When adding trusted backend behavior:
 
@@ -106,7 +107,7 @@ Keep these files in sync when architecture or flows change:
 The highest priority gaps are tracked in [tasks.md](tasks.md). In short:
 
 - Move public submit and accept flows server-side.
-- Configure and verify real Safety Pack notification scheduling.
+- Configure GitHub/Supabase `SAFETY_CRON_SECRET` matching and verify real Safety Pack SMS scheduling.
 - Add CAPTCHA/rate limiting.
 - Clean env handling.
 - Continue moving trusted backend workflows into Supabase Edge Functions.

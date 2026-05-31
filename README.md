@@ -92,11 +92,14 @@ TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
 TWILIO_VERIFY_SERVICE_SID=
 TWILIO_MESSAGING_SERVICE_SID=
+SAFETY_CRON_SECRET=
 ```
 
 Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions. Never add `TELEGRAM_BOT_TOKEN`, Twilio secrets, or the service-role key to a `VITE_` variable.
 
 `PHONE_VERIFICATION_TEST_CODE` is an optional server-only QA override. When it is set, the phone verification functions can approve that fixed code alongside normal Twilio OTP checks, and unsupported/fake E.164 numbers can create a test challenge without sending SMS. Do not configure it as a `VITE_` variable.
+
+`SAFETY_CRON_SECRET` protects the public `safety-checkin-reminder` function. Set the same value as a Supabase Function Secret and as a GitHub repository secret so `.github/workflows/safety-checkin-reminder.yml` can invoke the scheduler every five minutes.
 
 ## Google Auth
 
@@ -157,7 +160,7 @@ Committed functions:
 | `activate-safety-pack` | Authenticated host endpoint that activates a Safety Pack with server-generated tokens and Telegram activation copy. | Local code is in repo; deploy with default JWT verification. |
 | `ack-safety-pack` | Public token endpoint for Safety Pack All good, Call me, and Emergency actions. | Local code is in repo; deploy with `--no-verify-jwt`. |
 | `safety-alert` | Authenticated endpoint that sends trusted-contact Twilio SMS for emergency or missed check-in. | Local code is in repo; deploy after Twilio Messaging secrets are set. |
-| `safety-checkin-reminder` | Scheduled processor for Telegram check-in reminders and missed-check-in escalation. | Local code is in repo; deploy with `--no-verify-jwt` and protect with `SAFETY_CRON_SECRET` when configured. |
+| `safety-checkin-reminder` | Scheduled processor for Telegram check-in reminders and missed-check-in escalation. | Local code is in repo; deploy with `--no-verify-jwt`; GitHub Actions invokes it every five minutes when `SAFETY_CRON_SECRET` is configured. |
 
 Useful commands:
 
@@ -173,6 +176,7 @@ deno check supabase/functions/activate-safety-pack/handler.ts supabase/functions
 supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... PUBLIC_SITE_URL=https://uinvite.me
 supabase secrets set TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_VERIFY_SERVICE_SID=... TWILIO_MESSAGING_SERVICE_SID=...
 supabase secrets set PHONE_VERIFICATION_TEST_CODE=...
+supabase secrets set SAFETY_CRON_SECRET=...
 supabase db push
 supabase functions deploy telegram-webhook --no-verify-jwt
 supabase functions deploy create-telegram-link
@@ -224,12 +228,14 @@ Before calling a deployment healthy, smoke test:
 2. `/dashboard` redirects signed-out users to `/auth`.
 3. Host can sign up/sign in.
 4. Host can set handle, city, bio, and public profile.
-5. Host can add an availability slot and activate the schedule.
-6. Host can enable at least one screening question.
-7. Visitor can open `/:handle`, choose a slot, answer screening, and submit.
-8. Host sees the pending invite.
-9. Host accepts the invite and a Date is created.
-10. Date detail shows invitee contact and screening answers.
-11. Safety Pack draft opens and can be activated.
+5. Host can add at least one trusted contact phone in Settings.
+6. Host can add an availability slot and activate the schedule.
+7. Host can enable at least one screening question.
+8. Visitor can open `/:handle`, choose a slot, answer screening, and submit.
+9. Host sees the pending invite.
+10. Host accepts the invite and a Date is created.
+11. Date detail shows invitee contact and screening answers.
+12. Safety Pack draft opens and can be activated.
+13. `Safety Check-In Reminder` GitHub workflow can be run manually and returns success.
 
 Known implementation work is tracked in [tasks.md](tasks.md).

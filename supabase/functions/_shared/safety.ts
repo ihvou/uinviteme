@@ -56,6 +56,11 @@ interface ProfileRecord {
   trusted_contacts_phones: unknown;
 }
 
+interface TrustedContactRecord {
+  phone_e164: string;
+  label: string | null;
+}
+
 interface TelegramConnectionRecord {
   telegram_chat_id: string;
   telegram_username: string | null;
@@ -204,7 +209,14 @@ export async function sendSafetyAlertForPack(
   }
 
   const profile = await getProfile(env, fetcher, date.user_id);
-  const phones = parseTrustedContactPhones(profile?.trusted_contacts_phones);
+  const trustedContacts = await getTrustedContactsSafely(
+    env,
+    fetcher,
+    date.user_id,
+  );
+  const phones = trustedContacts.length > 0
+    ? trustedContacts.map((contact) => contact.phone_e164)
+    : parseTrustedContactPhones(profile?.trusted_contacts_phones);
   const body = buildTrustedContactAlert(profile, date, input.reason);
 
   let sent = 0;
@@ -451,6 +463,38 @@ async function getProfile(
   );
 
   return rows[0] ?? null;
+}
+
+async function getTrustedContacts(
+  env: SupabaseServiceEnv,
+  fetcher: Fetcher,
+  userId: string,
+) {
+  const rows = await supabaseRest<TrustedContactRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/trusted_contacts?user_id=eq.${
+      encodeURIComponent(userId)
+    }&is_active=eq.true&select=phone_e164,label&order=sort_order.asc`,
+  );
+
+  return rows.filter((row) => row.phone_e164);
+}
+
+async function getTrustedContactsSafely(
+  env: SupabaseServiceEnv,
+  fetcher: Fetcher,
+  userId: string,
+) {
+  try {
+    return await getTrustedContacts(env, fetcher, userId);
+  } catch (error) {
+    console.warn(
+      "trusted_contacts lookup failed; falling back to legacy profile contacts",
+      error instanceof Error ? error.message : error,
+    );
+    return [];
+  }
 }
 
 async function getHostTelegramConnection(

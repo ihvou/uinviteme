@@ -58,11 +58,13 @@ supabase/functions/_shared/sms.ts
 supabase/functions/_shared/supabaseAdmin.ts
 ```
 
-The webhook validates Telegram's secret header, maps visitor invite-update starts to opted-in invitees, links host admin chats through short-lived Settings tokens, runs the visitor discovery MVP (`/start discover_<handle>`, one-profile-at-a-time browsing, Skip/Invite, manual city, Telegram location, photo cards, inline slot selection, and Twilio-backed phone gate), and lets linked hosts accept/decline invite requests, list pending invites/dates, toggle public/discovery visibility, and use active Safety Pack check-in callbacks. `set-telegram-host-notifications` pauses or resumes invite delivery for already linked host chats from the web UI. Safety handlers call shared trusted backend helpers rather than browser-only state.
+The webhook validates Telegram's secret header, maps visitor invite-update starts to opted-in invitees, links host admin chats through short-lived Settings tokens, runs the visitor discovery MVP (`/start discover_<handle>`, one-profile-at-a-time browsing, Skip/Invite, manual city, Telegram location, photo cards, inline slot selection, first-invite photo encouragement, and Twilio-backed phone gate), and lets linked hosts accept/decline invite requests, list pending invites/dates, toggle public/discovery visibility, and use active Safety Pack check-in callbacks. `set-telegram-host-notifications` pauses or resumes invite delivery for already linked host chats from the web UI. Safety handlers call shared trusted backend helpers rather than browser-only state.
 
 Twilio is the MVP SMS provider decision: Twilio Verify for visitor OTP and Twilio Programmable Messaging for Safety Pack trusted-contact alerts. Keep Twilio credentials in Supabase Function Secrets only.
 
 `PHONE_VERIFICATION_TEST_CODE` is an optional Supabase Function Secret for manual QA. It lets phone verification accept one fixed code and create no-SMS challenges for fake/unsupported E.164 numbers; never expose it through Vite frontend env.
+
+Trusted contacts are stored in the private `trusted_contacts` table with owner-only RLS. `profiles.trusted_contacts_phones` is legacy fallback data only. The GitHub `Safety Check-In Reminder` workflow calls the public no-JWT scheduler function every five minutes and must use the same `SAFETY_CRON_SECRET` as Supabase.
 
 ## Before Finalizing Work
 

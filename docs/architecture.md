@@ -163,9 +163,11 @@ Implemented:
 
 - `/start invite_updates_<invite>` links a visitor Telegram chat to the invitee for that submitted invite.
 - `/start discover_<handle>` starts visitor discovery from the origin profile city, shows one eligible public active discovery-enabled profile at a time, records view/skip/invite events, accepts manual `City: Singapore` context, accepts Telegram native location context, and gates the first Telegram-origin invite link behind Twilio Verify SMS.
-- `/start host_<token>` links a host chat, then `/start`, `/settings`, `/admin`, or the persistent host keyboard shows profile links, accepted-invite web links, public profile visibility, and discovery visibility controls.
+- `/start host_<token>` links a host chat, then `/start`, `/settings`, `/admin`, or the persistent host keyboard shows profile links, native invite/date lists, public profile visibility, discovery visibility controls, and active Safety Pack actions.
 - `accept-invite` sends the visitor a Telegram message when the host accepts and the visitor linked Telegram; Instagram contact details are sent as `instagram.com` links and Telegram handles remain native mentions.
 - `send-phone-otp` and `verify-phone-otp` provide Twilio Verify-backed phone verification primitives for the web invite wizard when `VITE_PHONE_VERIFICATION_MODE=twilio`. A server-only `PHONE_VERIFICATION_TEST_CODE` can be enabled for QA so fake/unsupported E.164 numbers create a no-SMS challenge and the fixed code is accepted alongside real Twilio checks.
+- First Telegram-origin invite handoff encourages visitors to include clear recent photos or a photo-rich Instagram, because richer identity context should improve host acceptance rates.
+- Safety Pack trusted contact numbers live in private `trusted_contacts` rows with owner-only RLS. The legacy `profiles.trusted_contacts_phones` field is only a fallback for old data and should not receive new writes.
 
 Next bot features:
 
@@ -201,6 +203,7 @@ Implementation rules:
 - Keep `PHONE_VERIFICATION_TEST_CODE` server-only too. It is a QA override, not a production user-facing feature.
 - Log provider IDs, delivery status, failure reasons, and idempotency keys for OTP and Safety Pack SMS.
 - Treat phone numbers as sensitive personal data. Store only the normalized E.164 value and avoid logging full numbers in function logs.
+- `safety-checkin-reminder` is invoked by `.github/workflows/safety-checkin-reminder.yml` every five minutes. Configure the same `SAFETY_CRON_SECRET` in Supabase Function Secrets and GitHub repository secrets.
 
 ## Planned Notification And Telegram Rules
 

@@ -70,19 +70,19 @@ Current caveat: acceptance is server-side and protected by a unique date-per-inv
 
 ## Scenario 4: Host Activates Safety Pack
 
-Status: Partially implemented as backend MVP; scheduling and real-world SMS verification still need operational setup.
+Status: Partially implemented as backend MVP; trusted-contact setup and scheduled invocation are implemented, while real-world SMS verification still needs staging proof.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
 | 1 | Host | Opens `/dates/:dateId/safety`. | App loads or creates a Safety Pack draft. |
-| 2 | Host | Reviews trusted-contact share text and check-in timing. | System shows check-in and escalation time. |
+| 2 | Host | Adds trusted contact phones in Settings, then reviews share text and check-in timing. | Contacts are stored in the private `trusted_contacts` table; system shows check-in and escalation time. |
 | 3 | Host | Activates Safety Pack. | `activate-safety-pack` marks it active with server-generated action tokens and sends Telegram activation copy when the host is linked. |
 | 4 | Host | Uses Telegram check-in actions. | Bot supports All good, Call me, and Emergency callbacks. |
-| 5 | Trusted contact | Receives emergency or missed-check-in alert. | `safety-alert` sends Twilio SMS only when escalation is needed and logs delivery attempts. |
+| 5 | Trusted contact | Receives emergency or missed-check-in alert. | `safety-alert` and `safety-checkin-reminder` send Twilio SMS only when escalation is needed and log delivery attempts. |
 
 Success condition: Safety Pack is active and visible to the host.
 
-Current caveat: backend functions exist, but production still needs scheduled invocation for `safety-checkin-reminder`, trusted-contact phone management, and staging verification with real Twilio SMS.
+Current caveat: the GitHub scheduler needs `SAFETY_CRON_SECRET` configured in GitHub to match Supabase, and the workflow still needs a real Twilio SMS staging test.
 
 ## Scenario 5: Telegram Bot Extension
 
@@ -169,12 +169,12 @@ Current caveat: Telegram contact sharing requires the host to link Telegram firs
 
 ### Scenario 10: Safety Pack Telegram Check-In And SMS Emergency Alert
 
-Status: Implemented as backend MVP; production scheduling and real SMS verification remain.
+Status: Implemented as backend MVP; production secret setup and real SMS verification remain.
 
 | Step | Actor | Interaction | System result |
 |---:|---|---|---|
-| 1 | Host | Activates Safety Pack. | Backend schedules Telegram check-in reminder. |
-| 2 | Bot | Sends check-in reminder at configured time. | Host sees All good, Call me, and Emergency actions in Telegram. |
+| 1 | Host | Adds trusted contacts and activates Safety Pack. | Backend stores server action tokens and the scheduled GitHub workflow can invoke check-in processing. |
+| 2 | Bot | Sends check-in reminder near configured time. | Host sees All good, Call me, and Emergency actions in Telegram. |
 | 3 | Host | Taps All good. | Safety Pack is marked checked-in; no trusted-contact SMS is sent. |
 | 4 | Host | Taps Emergency, or misses check-in after grace period. | Backend sends Twilio SMS alert to trusted contact. |
 | 5 | System | Logs delivery outcome. | Notification delivery is recorded for audit/retry. |
@@ -192,7 +192,7 @@ Status: Implemented as a Telegram MVP with profile photos, readable cards, inlin
 | 3 | Visitor | Optionally shares Telegram native location or sends city manually. | Bot updates discovery location and ranking context. |
 | 4 | Bot | Shows one profile at a time. | Only public, active, discovery-enabled profiles are eligible. |
 | 5 | Visitor | Taps Invite or Skip. | Invite opens the web invite flow; Skip records discovery event and shows next profile. |
-| 6 | Visitor | First invites from Telegram discovery before phone validation. | Bot sends a Twilio Verify SMS, checks the reply code, and only then sends the selected invite page link. |
+| 6 | Visitor | First invites from Telegram discovery before phone validation. | Bot sends a Twilio Verify SMS, checks the reply code, encourages adding clear recent photos or photo-rich Instagram, and only then sends the selected invite page link. |
 
 Success condition: visitor can browse public active profiles one by one in Telegram, with invite actions returning to the web flow.
 
@@ -215,12 +215,13 @@ The current hosted regression path is:
 1. Landing page renders.
 2. Protected route redirects to auth.
 3. Host signs up.
-4. Host configures profile and schedule.
-5. Host enables a screening question.
-6. Visitor submits a public invite.
-7. Host accepts invite.
-8. Date appears.
-9. Safety Pack activates.
+4. Host configures profile and trusted contacts.
+5. Host configures schedule.
+6. Host enables a screening question.
+7. Visitor submits a public invite.
+8. Host accepts invite.
+9. Date appears.
+10. Safety Pack activates.
 
 This path was verified on Cloudflare Pages after independent deployment. See [README](../README.md#regression-checklist) for the operational checklist.
 
