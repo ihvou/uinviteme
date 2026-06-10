@@ -37,6 +37,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Profile = Tables<"profiles">;
+type ProfilePhoto = Tables<"profile_photos">;
 type AcceptedContactChannel = "telegram" | "instagram";
 
 export default function Settings() {
@@ -58,6 +59,7 @@ export default function Settings() {
     AcceptedContactChannel
   >("telegram");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [profilePhotos, setProfilePhotos] = useState<ProfilePhoto[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -95,6 +97,14 @@ export default function Settings() {
           : "telegram",
       );
       setPhotoUrl(data.photo_url || null);
+
+      const { data: photoData } = await supabase
+        .from("profile_photos")
+        .select("*")
+        .eq("profile_id", user.id)
+        .order("sort_order");
+
+      setProfilePhotos(photoData || []);
     }
     setLoading(false);
   };
@@ -199,7 +209,11 @@ export default function Settings() {
                   userId={user?.id || ""}
                   currentPhotoUrl={photoUrl}
                   displayName={displayName}
-                  onPhotoUpdated={setPhotoUrl}
+                  profilePhotos={profilePhotos}
+                  onPhotosUpdated={(photos, primaryUrl) => {
+                    setProfilePhotos(photos);
+                    setPhotoUrl(primaryUrl);
+                  }}
                 />
               </div>
 

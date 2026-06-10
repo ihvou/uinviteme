@@ -31,7 +31,7 @@ Status: Implemented, with token-link caveat still tracked in tasks.
 | 5 | Host | Enables screening questions and requirements. | Screening config controls the visitor wizard. |
 | 6 | System | Shows public profile link on dashboard. | Host can share the link in dating apps or social DMs. |
 
-Success condition: a signed-out visitor can open `/:handle` and see host profile, availability, tags, and an Invite button.
+Success condition: a signed-out visitor can open `/:handle` and see host profile photos, availability, tags, and an Invite button.
 
 Current caveat: dashboard token links are still unreliable; public profile links work.
 
@@ -190,7 +190,7 @@ Status: Implemented as a Telegram MVP with profile photos, readable cards, inlin
 | 1 | Visitor | Clicks "View profiles nearby" after invite flow or starts Browse in bot. | Bot starts discovery. |
 | 2 | System | Chooses discovery location. | Uses first viewed/invited host city as initial context. |
 | 3 | Visitor | Optionally shares Telegram native location or sends city manually. | Bot updates discovery location and ranking context. |
-| 4 | Bot | Shows one profile at a time. | Only public, active, discovery-enabled profiles are eligible. |
+| 4 | Bot | Shows one profile at a time. | Only public, active, discovery-enabled profiles are eligible. Profiles with gallery rows send a Telegram media group before the readable profile card. |
 | 5 | Visitor | Taps Invite or Skip. | Invite opens the web invite flow; Skip records discovery event and shows next profile. |
 | 6 | Visitor | First invites from Telegram discovery before phone validation. | Bot sends a Twilio Verify SMS, checks the reply code, encourages adding clear recent photos or photo-rich Instagram, and only then sends the selected invite page link. |
 

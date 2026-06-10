@@ -457,20 +457,31 @@ Deno.test("handleTelegramUpdate starts discovery and shows one eligible profile"
     throw new Error(`unexpected result: ${JSON.stringify(result)}`);
   }
 
-  const telegramBody = mock.lastTelegramBody("/sendPhoto");
-  if (telegramBody.photo !== "https://images.example/maya.jpg") {
-    throw new Error("profile message did not include candidate photo");
+  const mediaGroupBody = mock.lastTelegramBody("/sendMediaGroup");
+  if (mediaGroupBody.media?.length !== 4) {
+    throw new Error("profile gallery did not include media group photos");
+  }
+  if (
+    mediaGroupBody.media[0]?.media !==
+      `https://example.supabase.co/storage/v1/object/public/avatars/${FIRST_PROFILE_ID}/1.jpg`
+  ) {
+    throw new Error("profile media group did not use profile_photos storage");
+  }
+
+  const telegramBody = mock.lastTelegramBody("/sendMessage");
+  if (telegramBody.text.includes("https://images.example/maya.jpg")) {
+    throw new Error("profile card should not expose the legacy avatar URL");
   }
   if (telegramBody.parse_mode !== "MarkdownV2") {
     throw new Error("profile message did not use Telegram MarkdownV2");
   }
-  if (!telegramBody.caption.includes("✨ *Maya, 29*")) {
+  if (!telegramBody.text.includes("✨ *Maya, 29*")) {
     throw new Error("profile message did not include candidate");
   }
-  if (!telegramBody.caption.includes("🗓 *Available options*")) {
+  if (!telegramBody.text.includes("🗓 *Available options*")) {
     throw new Error("profile message did not include available options");
   }
-  if (!telegramBody.caption.includes("Tuesday, early evening")) {
+  if (!telegramBody.text.includes("Tuesday, early evening")) {
     throw new Error("profile message did not include readable schedule");
   }
   if (
@@ -1062,6 +1073,18 @@ function createMockFetcher() {
       ]);
     }
 
+    if (normalizedUrl.includes("/rest/v1/profile_photos")) {
+      if (normalizedUrl.includes(`profile_id=eq.${FIRST_PROFILE_ID}`)) {
+        return json([
+          { storage_path: `${FIRST_PROFILE_ID}/1.jpg`, sort_order: 0 },
+          { storage_path: `${FIRST_PROFILE_ID}/2.jpg`, sort_order: 1 },
+          { storage_path: `${FIRST_PROFILE_ID}/3.jpg`, sort_order: 2 },
+        ]);
+      }
+
+      return json([]);
+    }
+
     if (normalizedUrl.includes("/rest/v1/profiles")) {
       if (init?.method === "PATCH") {
         profileUpdates.push(JSON.parse(init.body?.toString() || "{}"));
@@ -1197,6 +1220,7 @@ function createMockFetcher() {
     if (
       normalizedUrl.includes("/sendMessage") ||
       normalizedUrl.includes("/sendPhoto") ||
+      normalizedUrl.includes("/sendMediaGroup") ||
       normalizedUrl.includes("/answerCallbackQuery")
     ) {
       return json({ ok: true });

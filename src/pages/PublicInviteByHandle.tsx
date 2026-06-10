@@ -4,18 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calendar, MapPin, Lock, AlertCircle, Coffee, Wine, UtensilsCrossed, Sparkles } from 'lucide-react';
+import { Calendar, MapPin, Lock, AlertCircle } from 'lucide-react';
 import { usePublicInviteByHandle, SlotWithDate } from '@/hooks/usePublicInviteByHandle';
 import { InviteSubmitSuccess, InviteWizard } from '@/components/invite/InviteWizard';
 import { InviteSubmittedCard } from '@/components/invite/InviteSubmittedCard';
 import { BrandLogo } from '@/components/BrandLogo';
-
-const formatIcons: Record<string, typeof Coffee> = {
-  Coffee: Coffee,
-  Drinks: Wine,
-  Dinner: UtensilsCrossed,
-  Activity: Sparkles,
-};
+import { getFormatIcon } from '@/lib/formatIcons';
+import { ProfilePhotoGallery } from '@/components/profile/ProfilePhotoGallery';
 
 export default function PublicInviteByHandle() {
   const { handle } = useParams<{ handle: string }>();
@@ -23,6 +18,7 @@ export default function PublicInviteByHandle() {
   const selectedSlotId = searchParams.get('slot');
   const {
     profile,
+    profilePhotos,
     slots,
     screeningConfig,
     formats,
@@ -52,11 +48,9 @@ export default function PublicInviteByHandle() {
     if (matchingSlot) setSelectedSlot(matchingSlot);
   }, [selectedSlotId, selectedSlot, slots]);
 
-  const getFormatIcon = (formatId: string | null) => {
-    if (!formatId) return Coffee;
+  const getSlotFormatIcon = (formatId: string | null) => {
     const format = formats.find(f => f.id === formatId);
-    if (!format?.icon_key) return Coffee;
-    return formatIcons[format.icon_key] || Coffee;
+    return getFormatIcon(format?.icon_key);
   };
 
   if (loading) {
@@ -169,19 +163,11 @@ export default function PublicInviteByHandle() {
       {/* Profile Header */}
       <section className="py-12 px-4 bg-card border-b border-border">
         <div className="container mx-auto max-w-2xl text-center">
-          {profile?.photo_url ? (
-            <img
-              src={profile.photo_url}
-              alt={profile.display_name || 'Host'}
-              className="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
-            />
-          ) : (
-            <div className="w-24 h-24 rounded-full bg-gradient-hero mx-auto mb-4 flex items-center justify-center">
-              <span className="text-3xl font-display font-bold text-primary-foreground">
-                {profile?.display_name?.charAt(0)?.toUpperCase() || '?'}
-              </span>
-            </div>
-          )}
+          <ProfilePhotoGallery
+            photos={profilePhotos.map((photo) => photo.publicUrl)}
+            fallbackPhotoUrl={profile.photo_url}
+            displayName={profile.display_name}
+          />
           <h1 className="font-display text-2xl font-bold text-foreground mb-2">
             {profile?.display_name ? `${profile.display_name}'s Invite Page` : 'Invite Page'}
           </h1>
@@ -224,7 +210,7 @@ export default function PublicInviteByHandle() {
           ) : (
             <div className="space-y-4">
               {slots.map((slot) => {
-                const FormatIcon = getFormatIcon(slot.format);
+                const FormatIcon = getSlotFormatIcon(slot.format);
                 const formatLabel = formats.find(f => f.id === slot.format)?.label || '';
                 const intentLabel = intentTags.find(t => t.id === slot.intent_tag)?.label || '';
                 const vibeLabels = vibeTags.filter(t => slot.vibe_tags?.includes(t.id)).map(t => t.label);

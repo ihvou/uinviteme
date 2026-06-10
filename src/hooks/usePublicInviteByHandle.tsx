@@ -6,6 +6,7 @@ import { getFunctionErrorMessage } from '@/lib/functionError';
 
 export type Slot = Tables<'slots'>;
 export type Profile = Tables<'profiles'>;
+export type ProfilePhoto = Tables<'profile_photos'> & { publicUrl: string };
 export type ScreeningConfig = Tables<'screening_configs'>;
 export type CatalogFormat = Tables<'catalog_formats'>;
 export type CatalogVibeTag = Tables<'catalog_vibe_tags'>;
@@ -21,6 +22,7 @@ export interface SlotWithDate extends Slot {
 export function usePublicInviteByHandle(handle: string | undefined) {
   const [scheduleId, setScheduleId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profilePhotos, setProfilePhotos] = useState<ProfilePhoto[]>([]);
   const [slots, setSlots] = useState<SlotWithDate[]>([]);
   const [screeningConfig, setScreeningConfig] = useState<ScreeningConfig | null>(null);
   const [formats, setFormats] = useState<CatalogFormat[]>([]);
@@ -89,6 +91,7 @@ export function usePublicInviteByHandle(handle: string | undefined) {
           intentTagsRes,
           boundaryTagsRes,
           questionsRes,
+          profilePhotosRes,
         ] = await Promise.all([
           supabase
             .from('slots')
@@ -107,6 +110,11 @@ export function usePublicInviteByHandle(handle: string | undefined) {
           supabase.from('catalog_intent_tags').select('*').eq('is_active', true).order('sort_order'),
           supabase.from('catalog_boundary_tags').select('*').eq('is_active', true).order('sort_order'),
           supabase.from('catalog_questions').select('*').eq('is_active', true).order('sort_order'),
+          supabase
+            .from('profile_photos')
+            .select('*')
+            .eq('profile_id', profileData.id)
+            .order('sort_order'),
         ]);
 
         // Process slots to add target dates for next 7 days
@@ -137,6 +145,12 @@ export function usePublicInviteByHandle(handle: string | undefined) {
         if (intentTagsRes.data) setIntentTags(intentTagsRes.data);
         if (boundaryTagsRes.data) setBoundaryTags(boundaryTagsRes.data);
         if (questionsRes.data) setQuestions(questionsRes.data);
+        if (profilePhotosRes.data) {
+          setProfilePhotos(profilePhotosRes.data.map((photo) => ({
+            ...photo,
+            publicUrl: supabase.storage.from('avatars').getPublicUrl(photo.storage_path).data.publicUrl,
+          })));
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load invite');
       } finally {
@@ -198,6 +212,7 @@ export function usePublicInviteByHandle(handle: string | undefined) {
   return {
     scheduleId,
     profile,
+    profilePhotos,
     slots,
     screeningConfig,
     formats,

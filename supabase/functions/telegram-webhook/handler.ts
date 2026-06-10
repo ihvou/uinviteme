@@ -187,6 +187,11 @@ interface ProfileRecord {
   photo_url: string | null;
 }
 
+interface ProfilePhotoRecord {
+  storage_path: string;
+  sort_order: number;
+}
+
 interface HostVisibilityProfileRecord {
   id: string;
   handle: string | null;
@@ -213,6 +218,7 @@ interface DiscoverySessionRecord {
 
 interface DiscoveryProfileCandidate extends ProfileRecord {
   distanceKm?: number;
+  photo_urls?: string[];
 }
 
 interface TelegramLinkTokenRecord {
@@ -1785,7 +1791,13 @@ async function findNextDiscoveryProfile(
     return displayNameForProfile(a).localeCompare(displayNameForProfile(b));
   });
 
-  return candidates[0] ?? null;
+  const candidate = candidates[0] ?? null;
+  if (!candidate) return null;
+
+  return {
+    ...candidate,
+    photo_urls: await getProfilePhotoUrls(env, fetcher, candidate.id),
+  };
 }
 
 function readEnv(): TelegramWebhookEnv {
@@ -1998,6 +2010,24 @@ async function getPublicDiscoveryProfiles(
     fetcher,
     `/rest/v1/profiles?public_profile_enabled=eq.true&discovery_enabled=eq.true${cityParam}&select=${profileSelect()}&limit=100`,
   );
+}
+
+async function getProfilePhotoUrls(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  profileId: string,
+) {
+  const rows = await supabaseRest<ProfilePhotoRecord[]>(
+    env,
+    fetcher,
+    `/rest/v1/profile_photos?profile_id=eq.${
+      encodeURIComponent(profileId)
+    }&select=storage_path,sort_order&order=sort_order.asc&limit=4`,
+  );
+
+  return rows
+    .map((photo) => avatarPublicUrl(env, photo.storage_path))
+    .filter(Boolean);
 }
 
 async function getActiveSchedules(
@@ -2452,6 +2482,37 @@ async function sendTelegramPhoto(
   }
 }
 
+async function sendTelegramMediaGroup(
+  env: TelegramWebhookEnv,
+  fetcher: Fetcher,
+  chatId: string,
+  photoUrls: string[],
+) {
+  const response = await fetcher(
+    `${
+      env.telegramApiBaseUrl.replace(/\/+$/, "")
+    }/bot${env.telegramBotToken}/sendMediaGroup`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        media: photoUrls.slice(0, 4).map((photoUrl) => ({
+          type: "photo",
+          media: photoUrl,
+        })),
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Telegram sendMediaGroup failed: ${response.status} ${await response
+        .text()}`,
+    );
+  }
+}
+
 async function answerCallbackQuery(
   env: TelegramWebhookEnv,
   fetcher: Fetcher,
@@ -2488,13 +2549,31 @@ async function sendDiscoveryProfile(
   options: DiscoverySlotOption[],
 ) {
   const caption = formatDiscoveryProfile(env, profile, options);
+  const photoUrls = discoveryPhotoUrls(profile);
 
-  if (profile.photo_url) {
+  if (photoUrls.length > 1) {
+    try {
+      await sendTelegramMediaGroup(env, fetcher, chatId, photoUrls);
+      await sendTelegramMessage(
+        env,
+        fetcher,
+        chatId,
+        caption,
+        profileActionKeyboard(),
+        "MarkdownV2",
+      );
+      return;
+    } catch (error) {
+      console.error("Telegram media group failed, falling back", error);
+    }
+  }
+
+  if (photoUrls[0]) {
     await sendTelegramPhoto(
       env,
       fetcher,
       chatId,
-      profile.photo_url,
+      photoUrls[0],
       caption,
       profileActionKeyboard(),
     );
@@ -2627,6 +2706,22 @@ function profileUrl(
     encodeURIComponent(handle)
   }`;
   return slotId ? `${base}?slot=${encodeURIComponent(slotId)}` : base;
+}
+
+function discoveryPhotoUrls(profile: DiscoveryProfileCandidate) {
+  return Array.from(
+    new Set([...(profile.photo_urls || []), profile.photo_url].filter(Boolean)),
+  ).slice(0, 4) as string[];
+}
+
+function avatarPublicUrl(env: TelegramWebhookEnv, storagePath: string) {
+  const encodedPath = storagePath
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+  return `${
+    env.supabaseUrl.replace(/\/+$/, "")
+  }/storage/v1/object/public/avatars/${encodedPath}`;
 }
 
 function profileSelect() {

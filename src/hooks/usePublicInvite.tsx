@@ -7,6 +7,7 @@ import { getFunctionErrorMessage } from '@/lib/functionError';
 export type InviteLink = Tables<'invite_links'>;
 export type Slot = Tables<'slots'>;
 export type Profile = Tables<'profiles'>;
+export type ProfilePhoto = Tables<'profile_photos'> & { publicUrl: string };
 export type ScreeningConfig = Tables<'screening_configs'>;
 export type CatalogFormat = Tables<'catalog_formats'>;
 export type CatalogVibeTag = Tables<'catalog_vibe_tags'>;
@@ -22,6 +23,7 @@ export interface SlotWithDate extends Slot {
 export function usePublicInvite(token: string | undefined) {
   const [inviteLink, setInviteLink] = useState<InviteLink | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profilePhotos, setProfilePhotos] = useState<ProfilePhoto[]>([]);
   const [slots, setSlots] = useState<SlotWithDate[]>([]);
   const [screeningConfig, setScreeningConfig] = useState<ScreeningConfig | null>(null);
   const [formats, setFormats] = useState<CatalogFormat[]>([]);
@@ -107,7 +109,22 @@ export function usePublicInvite(token: string | undefined) {
             .eq('id', scheduleData.user_id)
             .maybeSingle();
           
-          if (profileData) setProfile(profileData);
+          if (profileData) {
+            setProfile(profileData);
+
+            const { data: profilePhotoData } = await supabase
+              .from('profile_photos')
+              .select('*')
+              .eq('profile_id', profileData.id)
+              .order('sort_order');
+
+            if (profilePhotoData) {
+              setProfilePhotos(profilePhotoData.map((photo) => ({
+                ...photo,
+                publicUrl: supabase.storage.from('avatars').getPublicUrl(photo.storage_path).data.publicUrl,
+              })));
+            }
+          }
         }
 
         // Process slots to add target dates for next 7 days
@@ -199,6 +216,7 @@ export function usePublicInvite(token: string | undefined) {
   return {
     inviteLink,
     profile,
+    profilePhotos,
     slots,
     screeningConfig,
     formats,

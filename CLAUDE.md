@@ -8,6 +8,8 @@ uInvite.Me lets a host publish a public invite page with availability and screen
 
 Host auth uses Supabase email/password and Google Identity Services ID-token sign-in. Visitor identity is still handled through invite details and phone verification, not visitor accounts.
 
+Host public profiles now support ordered galleries through `profile_photos` plus the public `avatars` bucket. `profiles.photo_url` remains the primary-photo fallback for older rows.
+
 ## Current Runtime
 
 - Frontend: Vite React app hosted on Cloudflare Pages.
@@ -58,7 +60,7 @@ supabase/functions/_shared/sms.ts
 supabase/functions/_shared/supabaseAdmin.ts
 ```
 
-The webhook validates Telegram's secret header, maps visitor invite-update starts to opted-in invitees, links host admin chats through short-lived Settings tokens, runs the visitor discovery MVP (`/start discover_<handle>`, one-profile-at-a-time browsing, Skip/Invite, manual city, Telegram location, photo cards, inline slot selection, first-invite photo encouragement, and Twilio-backed phone gate), and lets linked hosts accept/decline invite requests, list pending invites/dates, toggle public/discovery visibility, and use active Safety Pack check-in callbacks. `set-telegram-host-notifications` pauses or resumes invite delivery for already linked host chats from the web UI. Safety handlers call shared trusted backend helpers rather than browser-only state.
+The webhook validates Telegram's secret header, maps visitor invite-update starts to opted-in invitees, links host admin chats through short-lived Settings tokens, runs the visitor discovery MVP (`/start discover_<handle>`, one-profile-at-a-time browsing, Skip/Invite, manual city, Telegram location, profile photo media groups with single-photo fallback, inline slot selection, first-invite photo encouragement, and Twilio-backed phone gate), and lets linked hosts accept/decline invite requests, list pending invites/dates, toggle public/discovery visibility, and use active Safety Pack check-in callbacks. `set-telegram-host-notifications` pauses or resumes invite delivery for already linked host chats from the web UI. Safety handlers call shared trusted backend helpers rather than browser-only state.
 
 Twilio is the MVP SMS provider decision: Twilio Verify for visitor OTP and Twilio Programmable Messaging for Safety Pack trusted-contact alerts. Keep Twilio credentials in Supabase Function Secrets only.
 

@@ -29,8 +29,8 @@ flowchart LR
 | Cloudflare Pages | Hosts the static Vite build from `dist` | Git-connected deploy from GitHub. No custom deploy command. |
 | React app | Runs UI, routing, Supabase client calls, and most current product behavior | Public invite submission now uses `submit-invite`; some authenticated host/admin flows still talk directly to Supabase from the browser. |
 | Supabase Auth | Host signup/signin and browser session persistence | Host auth supports email/password and Google Identity Services ID-token sign-in. Visitors remain accountless. |
-| Supabase Postgres | Profiles, schedules, slots, screening config, invitees, invites, dates, safety packs, catalogs | RLS is the primary security boundary. |
-| Supabase Storage | Profile avatar uploads | Uses the `avatars` bucket from the browser. |
+| Supabase Postgres | Profiles, profile photos, schedules, slots, screening config, invitees, invites, dates, safety packs, catalogs | RLS is the primary security boundary. `profile_photos` stores ordered `avatars` bucket paths while `profiles.photo_url` remains a primary-photo fallback. |
+| Supabase Storage | Profile avatar and gallery uploads | Uses the public `avatars` bucket; owner writes are constrained to their own storage folder. |
 | Supabase Edge Functions | `telegram-webhook`, `create-telegram-link`, `submit-invite`, `accept-invite`, and Safety Pack functions are committed for trusted backend workflows | Recommended for trusted server-side workflows. |
 | Telegram Bot | Visitor invite-update linking, discovery browsing, accepted-invite notifications, and host invite admin are implemented; safety menus are pending | Uses Telegram webhook secret validation and Supabase Function Secrets. |
 
@@ -163,6 +163,7 @@ Implemented:
 
 - `/start invite_updates_<invite>` links a visitor Telegram chat to the invitee for that submitted invite.
 - `/start discover_<handle>` starts visitor discovery from the origin profile city, shows one eligible public active discovery-enabled profile at a time, records view/skip/invite events, accepts manual `City: Singapore` context, accepts Telegram native location context, and gates the first Telegram-origin invite link behind Twilio Verify SMS.
+- Discovery cards send up to four profile photos as a Telegram media group when `profile_photos` rows exist, with `profiles.photo_url` as the single-photo fallback.
 - `/start host_<token>` links a host chat, then `/start`, `/settings`, `/admin`, or the persistent host keyboard shows profile links, native invite/date lists, public profile visibility, discovery visibility controls, and active Safety Pack actions.
 - `accept-invite` sends the visitor a Telegram message when the host accepts and the visitor linked Telegram; Instagram contact details are sent as `instagram.com` links and Telegram handles remain native mentions.
 - `send-phone-otp` and `verify-phone-otp` provide Twilio Verify-backed phone verification primitives for the web invite wizard when `VITE_PHONE_VERIFICATION_MODE=twilio`. A server-only `PHONE_VERIFICATION_TEST_CODE` can be enabled for QA so fake/unsupported E.164 numbers create a no-SMS challenge and the fixed code is accepted alongside real Twilio checks.

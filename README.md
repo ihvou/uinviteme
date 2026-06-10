@@ -28,7 +28,7 @@ Implemented routes:
 | `/` | Landing page |
 | `/auth` | Host sign in/sign up |
 | `/dashboard` | Host overview, invite links, status cards |
-| `/settings` | Public profile, handle, city, bio, photo |
+| `/settings` | Public profile, handle, city, bio, photos |
 | `/schedule` | Availability slots and screening configuration |
 | `/:handle` | Public profile invite page |
 | `/i/:token` | Token invite page |
@@ -150,7 +150,7 @@ Committed functions:
 
 | Function | Purpose | Status |
 |---|---|---|
-| `telegram-webhook` | Receives Telegram bot updates, verifies Telegram's webhook secret header, links `/start invite_updates_<invite>` chats to invitees, runs visitor discovery from `/start discover_<handle>` with Twilio-backed phone verification before invite links, and lets linked hosts accept/decline invites, list dates, use Safety Pack actions, and toggle public/discovery availability. | Local code and tests are in repo; deployed manually from CLI with `--no-verify-jwt`. |
+| `telegram-webhook` | Receives Telegram bot updates, verifies Telegram's webhook secret header, links `/start invite_updates_<invite>` chats to invitees, runs visitor discovery from `/start discover_<handle>` with profile photo media groups and Twilio-backed phone verification before invite links, and lets linked hosts accept/decline invites, list dates, use Safety Pack actions, and toggle public/discovery availability. | Local code and tests are in repo; deployed manually from CLI with `--no-verify-jwt`. |
 | `create-telegram-link` | Authenticated host endpoint that creates a short-lived Telegram host-link payload for Settings. | Local code and tests are in repo; deploy with default JWT verification. |
 | `set-telegram-host-notifications` | Authenticated host endpoint that enables or pauses invite notifications for an already linked Telegram host chat. | Local code and tests are in repo; deploy with default JWT verification. |
 | `accept-invite` | Authenticated host endpoint that accepts/declines invites, creates/finds the date on accept, creates a Safety Pack draft, and notifies a Telegram-linked visitor. | Local code and tests are in repo; deployed manually from CLI with default JWT verification. |

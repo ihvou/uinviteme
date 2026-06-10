@@ -16,6 +16,8 @@ Primary product loop:
 
 Host auth supports email/password and Google Identity Services ID-token sign-in through Supabase Auth. Visitors do not need accounts for invite submission.
 
+Host public profiles support an ordered 1-4 photo gallery in `profile_photos` backed by the public `avatars` storage bucket. `profiles.photo_url` remains the primary-photo fallback for older profiles and OAuth avatars.
+
 ## Commands
 
 Use npm, not Bun:
@@ -56,7 +58,7 @@ Do not re-add `bun.lockb` unless the project intentionally moves back to Bun. Do
 
 Supabase Edge Functions are now part of the repo for trusted backend slices:
 
-- `supabase/functions/telegram-webhook` handles visitor Telegram opt-in, discovery browsing, inline slot callbacks, host invite/date admin, host public/discovery visibility toggles, Twilio-backed Telegram discovery phone verification, and Safety Pack check-in callbacks.
+- `supabase/functions/telegram-webhook` handles visitor Telegram opt-in, discovery browsing with profile photo media groups, inline slot callbacks, host invite/date admin, host public/discovery visibility toggles, Twilio-backed Telegram discovery phone verification, and Safety Pack check-in callbacks.
 - `supabase/functions/create-telegram-link` creates short-lived host Telegram link tokens from authenticated Settings sessions.
 - `supabase/functions/set-telegram-host-notifications` lets a linked host pause or resume Telegram invite notifications from the web UI.
 - `supabase/functions/accept-invite` handles authenticated host accept/decline decisions and visitor Telegram notifications.
