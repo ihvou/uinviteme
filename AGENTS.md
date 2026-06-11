@@ -44,6 +44,8 @@ Root directory: /
 Deploy command: empty
 ```
 
+Supabase production deploys are automated by `.github/workflows/deploy-supabase.yml` for pushes to `main` that touch `supabase/**` or the workflow. The workflow expects GitHub repository secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, and `SUPABASE_PROJECT_ID`.
+
 Do not re-add `bun.lockb` unless the project intentionally moves back to Bun. Do not add `wrangler.toml` for the current static Pages deployment without confirming the Cloudflare build behavior.
 
 ## Security Rules

@@ -15,6 +15,7 @@ Host public profiles now support ordered galleries through `profile_photos` plus
 - Frontend: Vite React app hosted on Cloudflare Pages.
 - Backend: Supabase Auth, Postgres with RLS, Storage, and committed Supabase Edge Functions.
 - Lovable is no longer required for runtime hosting.
+- Supabase migrations/functions deploy from `.github/workflows/deploy-supabase.yml` on relevant `main` pushes when GitHub Supabase secrets are configured.
 
 ## High-Signal Files
 

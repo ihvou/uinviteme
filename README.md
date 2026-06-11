@@ -218,6 +218,24 @@ SPA fallback routing is provided by [public/_redirects](public/_redirects):
 /* /index.html 200
 ```
 
+Supabase deployment is automated by [.github/workflows/deploy-supabase.yml](.github/workflows/deploy-supabase.yml). On pushes to `main` that touch `supabase/**` or the workflow itself, GitHub Actions builds the app, runs Edge Function tests, applies migrations, and deploys committed Edge Functions.
+
+Required GitHub repository secrets:
+
+```txt
+SUPABASE_ACCESS_TOKEN=
+SUPABASE_DB_PASSWORD=
+SUPABASE_PROJECT_ID=vvjgrvltnnqoiijoufry
+```
+
+`SUPABASE_ACCESS_TOKEN` is a Supabase personal access token for the CLI. `SUPABASE_DB_PASSWORD` is the database password for the linked production project. Keep provider runtime secrets such as Telegram/Twilio/cron secrets in Supabase Function Secrets; the deploy workflow does not set or rotate them.
+
+The v13 acceptance-profile seed is intentionally not automatic on every push because it uploads assets and mutates production seed data. Run it manually when the acceptance fleet needs a refresh:
+
+```sh
+node supabase/seeds/v13_acceptance_profiles.mjs
+```
+
 Do not add `wrangler.toml` for the current static Pages deployment unless the Cloudflare project is intentionally moved to a Wrangler-managed setup. In this repo, `wrangler.toml` previously caused Cloudflare to skip the build command and fail because `dist` had not been generated.
 
 ## Regression Checklist
